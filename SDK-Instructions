@@ -1,0 +1,118 @@
+Link: https://github.com/anki/drive-sdk/wiki/Getting-Started-on-Ubuntu
+
+Getting Started on Ubuntu
+-------------------------
+These instructions assume you are using Ubuntu Desktop 12.04 (64-bit) or Ubuntu Desktop 13.10 (64-bit). Other versions may work as well. Regardless of the Ubuntu version, our testing suggests that Bluetooth LE support works best with Linux kernel versions >= 3.5. 
+
+
+1.Install dependencies
+======================
+$ sudo apt-get install cmake \
+                       curl \
+                       git \
+                       g++ \
+                       libreadline-dev \
+                       libglib2.0-dev
+
+
+2.Fetch and compile Anki Drive SDK
+==================================
+$ mkdir ~/anki && cd ~/anki
+$ git clone https://github.com/anki/drive-sdk.git
+$ cd drive-sdk
+$ mkdir -p build && cd build
+$ cmake .. -DBUILD_EXAMPLES=ON
+$ make
+$ make test
+$ make install
+
+
+3.Bring up a Bluetooth adapter
+==============================
+1. Obtain a suitable USB Bluetooth adapter like the Orico BTA-402
+
+2. Plug in the adapter and verify it is properly loaded by using lsusb
+$ lsusb
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 002 Device 001: ID 1d6b:0001 Linux Foundation 1.1 root hub
+Bus 003 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 004 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 002 Device 002: ID 0a12:0001 Cambridge Silicon Radio, Ltd Bluetooth Dongle (HCI mode)
+
+3. Enable the adapter with hciconfig (included with drive-sdk)
+$ sudo ~/anki/drive-sdk/build/dist/bin/hciconfig
+hci0:   Type: BR/EDR  Bus: USB
+    BD Address: 00:02:5B:03:52:F3  ACL MTU: 310:10  SCO MTU: 64:8
+    DOWN 
+    RX bytes:473 acl:0 sco:0 events:19 errors:0
+    TX bytes:317 acl:0 sco:0 commands:18 errors:0
+
+$ sudo ~/anki/drive-sdk/build/dist/bin/hciconfig hci0 up
+$ sudo ~/anki/drive-sdk/build/dist/bin/hciconfig
+hci0:   Type: BR/EDR  Bus: USB
+    BD Address: 00:02:5B:03:52:F3  ACL MTU: 310:10  SCO MTU: 64:8
+    UP RUNNING 
+    RX bytes:940 acl:0 sco:0 events:37 errors:0
+    TX bytes:634 acl:0 sco:0 commands:36 errors:0
+
+
+4. Test out the example apps
+============================
+Pull out Boson and Kourai from the Anki Drive Starter Kit and turn them on by pressing the little button on the bottom of each car.
+
+    1. Scan for them with the vehicle-scan example app
+$ sudo ~/anki/drive-sdk/build/dist/bin/vehicle-scan
+LE Scan ...
+DF:FA:7F:89:61:D2 Drive [v2159] (Boson 1e00)
+F0:9C:17:98:F8:E8 Drive [v2120] (Kourai 10b3)
+
+NOTE: version 2159 is required for compatibility with the current SDK.
+
+If the version of your vehicle is less than 2159, please update the firmware using the iOS or Android Anki Drive apps.
+
+    2. Connect to a vehicle using the device address, check version, ping, and enable sdk mode
+    $ sudo ~/anki/drive-sdk/build/dist/bin/vehicle-tool --adapter=hci0 --device=DF:FA:7F:89:61:D2
+    [DF:FA:7F:89:61:D2][LE]> connect
+    Attempting to connect to DF:FA:7F:89:61:D2
+    Connection successful
+    Starting handle: 0x0009 Ending handle: 0xffff
+    [handle: 0x000a, char properties: 0x0e, char value handle: 0x000b]
+    [handle: 0x000c, char properties: 0x12, char value handle: 0x000d]
+    [DF:FA:7F:89:61:D2][LE]> get-version
+    [read] VERSION_RESPONSE: 0x2120
+    [DF:FA:7F:89:61:D2][LE]> ping
+    [read] PING_RESPONSE
+    [DF:FA:7F:89:61:D2][LE]> sdk-mode 1
+
+    3. Flash the tail-lights
+    [DF:FA:7F:89:61:D2][LE]> set-lights-pattern TAIL FLASH 1 6 10
+
+    4. Turn on SDK mode to enable driving commands
+    sdk-mode 1
+
+    5. Set the speed of the vehicle
+    [DF:FA:7F:89:61:D2][LE]> set-speed 1000 25000
+
+    5bis. For a list and description of all SDK functions, type 'help'
+    [DF:FA:7F:89:61:D2][LE]> help
+    help                                           Show this help
+    exit                                           Exit interactive mode
+    quit                                           Exit interactive mode
+    connect         [address [address type]]       Connect to a remote device
+    disconnect                                     Disconnect from a remote device
+    mtu             <value>                        Exchange MTU for GATT/ATT
+    sdk-mode        [on]                           Set SDK Mode
+    ping                                           Send ping message to vehicle.
+    get-version                                    Request vehicle software version.
+    set-speed       <speed> <accel>                Set vehicle Speed (mm/sec) with acceleration (mm/sec^2)
+    change-lane     <horizontal speed> <horizontal accel> <relative offset> (right(+), left(-)) Change lanes at speed (mm/sec), accel (mm/sec^2) in the specified direction (offset)
+    set-lights-pattern <channel> <effect> <start> <end> <cycles_per_min> Set lights pattern for vehicle LEDs.
+    set-engine-lights <red> <green> <blue> <effect> <cycles_per_min> Set the pattern for the engine lights.
+    vehicle-disconnect                                Request that the vehicle disconnect (often more reliable than disconnect)
+    send-data-req   <new value>                    Write data to vehicle (Request response)
+    send-data       <new value>                    Write data to vehicle (No response)
+    read-data                                      Read last message from vehicle
+
+    6. Disconnect and exit from the vehicle SDK
+    [DF:FA:7F:89:61:D2][LE]> vehicle-disconnect
+    [DF:FA:7F:89:61:D2][LE]> exit 
