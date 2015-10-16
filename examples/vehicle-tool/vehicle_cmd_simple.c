@@ -1,48 +1,8 @@
 /*
- *  vehicle-tool (Simplified version)
- *
- *  Example vehicle control tool for Anki Drive SDK
- *
- *  Copyright (C) 2014 Anki, Inc.
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- *
- *  Portions of this software are derived from BlueZ, a Bluetooth protocol stack for
- *  Linux. The license for BlueZ is included below.
- */
-
-/*
- *
- *  BlueZ - Bluetooth protocol stack for Linux
- *
- *  Copyright (C) 2011  Nokia Corporation
- *
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *  A simpler version of the original 
+ * vehicle_cmd.c file with all event loops and 
+ * callbacks removed.
+ * == redefine all the functions of vehicle_cmd.c without the static definition
  *
  */
 
@@ -520,7 +480,7 @@ static void cmd_anki_vehicle_disconnect(int argcp, char **argvp)
                                         NULL, NULL);
 }
 
-static void cmd_anki_vehicle_sdk_mode(int argcp, char **argvp)
+static cmd_anki_vehicle_sdk_mode(int argcp, char **argvp)
 {
         uint8_t *value;
         size_t plen;
@@ -739,7 +699,7 @@ static void cmd_anki_vehicle_goto_lane(int argcp, char **argvp)
         gatt_write_char(attrib, handle, (uint8_t*)&lane_msg, lane_plen, NULL, NULL);
 }
 
-
+/*
 anki_vehicle_light_channel_t get_channel_by_name(const char *name)
 {
         uint8_t i;
@@ -778,6 +738,7 @@ anki_vehicle_light_effect_t get_effect_by_name(const char *name)
 
         return effect;
 }
+*/
 
 static void cmd_anki_vehicle_lights_pattern(int argcp, char **argvp)
 {
@@ -983,7 +944,7 @@ static struct {
 	{ NULL, NULL, NULL}
 };
 
-static void cmd_help(int argcp, char **argvp)
+void cmd_help(int argcp, char **argvp)
 {
 	int i;
 
@@ -1161,11 +1122,7 @@ static guint setup_signalfd(void)
 
 	return source;
 }
-
-
-/**
-Main function handling the commands
-**/
+/*
 int interactive(const char *src, const char *dst,
 		const char *dst_type, int psm)
 {
@@ -1205,3 +1162,4 @@ int interactive(const char *src, const char *dst,
 
 	return 0;
 }
+*/

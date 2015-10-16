@@ -5,3 +5,5 @@ make
 make test
 make install
 hciconfig
+
+## Then execute the ./build/dist/bin/main
