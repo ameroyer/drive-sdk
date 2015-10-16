@@ -13,11 +13,19 @@ include_directories(${drivekit_SOURCE_DIR}/include
 
 
 # Add sources
+if (BUILD_EXAMPLES)
 set(vehicleTool_SOURCES
                 vehicle_tool.c
                 vehicle_cmd.c
                 display.c
 )
+endif()
+if (BUILD_PROJECT)
+set(vehicleTool_SOURCES
+                vehicle_cmd_simple.c
+                display.c
+)
+endif ()
 
 add_executable(vehicle-tool ${vehicleTool_SOURCES})
 target_link_libraries(vehicle-tool

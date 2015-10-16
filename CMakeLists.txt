@@ -27,11 +27,36 @@ if (BUILD_EXAMPLES)
     add_subdirectory(deps/bzle)
     add_subdirectory(examples)
 endif ()
+
+### Compile only the files added for the project
 if (BUILD_PROJECT)
-    if (!BUILD_EXAMPLES)
+    if (NOT BUILD_EXAMPLES)
       add_subdirectory(deps/bzle)
     ENDIF()
-    add_subdirectory(commands)
+    SET (CMAKE_C_FLAGS      "")
+    include(FindGLIB2)
+    include(FindReadline)
+    include_directories(${drivekit_SOURCE_DIR}/include
+                    ${bzle_SOURCE_DIR}/include
+                    ${GLIB2_INCLUDE_DIRS}
+                    ${READLINE_INCLUDE_DIR}
+                    )
+    set(Project_SOURCES
+                main.c
+                examples/vehicle-tool/vehicle_cmd_simple.c
+		examples/vehicle-tool/vehicle_cmd.c
+                examples/vehicle-tool/display.c
+		)
+    add_executable(main ${Project_SOURCES})
+    target_link_libraries(main
+                    ankidrive
+                    bzle
+                    ${GLIB2_LIBRARIES}
+                    ${READLINE_LIBRARY}
+		    )
+    install(TARGETS main 
+	RUNTIME DESTINATION bin
+    )
 endif ()
 
 # CTest is flaky - Create a target to run our test suite directly
