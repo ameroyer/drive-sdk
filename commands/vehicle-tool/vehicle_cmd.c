@@ -1,5 +1,5 @@
 /*
- *  vehicle-tool
+ *  vehicle-tool (Simplified version)
  *
  *  Example vehicle control tool for Anki Drive SDK
  *
@@ -1162,6 +1162,10 @@ static guint setup_signalfd(void)
 	return source;
 }
 
+
+/**
+Main function handling the commands
+**/
 int interactive(const char *src, const char *dst,
 		const char *dst_type, int psm)
 {

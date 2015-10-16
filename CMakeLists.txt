@@ -10,6 +10,7 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT) 
 
 OPTION( BUILD_EXAMPLES                "Build example apps"                OFF )
+OPTION( BUILD_PROJECT                "Build code for cvml project"                OFF )
 
 SET (CMAKE_C_FLAGS                "-Wall -std=c99")
 include(MacroOutOfSourceBuild)
@@ -25,6 +26,11 @@ install(DIRECTORY include/ankidrive DESTINATION include)
 if (BUILD_EXAMPLES)
     add_subdirectory(deps/bzle)
     add_subdirectory(examples)
+    add_subdirectory(commands)
+endif ()
+if (BUILD_PROJECT)
+    add_subdirectory(deps/bzle)
+    add_subdirectory(commands)
 endif ()
 
 # CTest is flaky - Create a target to run our test suite directly
