@@ -1,5 +1,5 @@
 /*
- *  vehicle-tool
+ *  vehicle-tool (Simplified version)
  *
  *  Example vehicle control tool for Anki Drive SDK
  *
@@ -156,6 +156,7 @@ int main(int argc, char *argv[])
 		g_clear_error(&gerr);
 	}
 
+	// Call to vehicle_cm through interactive
 	interactive(opt_src, opt_dst, opt_dst_type, opt_psm);
 
 done:
