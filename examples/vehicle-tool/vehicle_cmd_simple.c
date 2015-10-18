@@ -552,7 +552,7 @@ void cmd_anki_vehicle_get_localization_position_update()
         gatt_write_char(attrib, handle, value, plen, NULL, NULL);
 }
 
-void cmd_anki_vehicle_set_speed_simple(int speed_, int accel_)
+void cmd_anki_vehicle_set_speed_simple(int speedd, int accell) {
         uint8_t *value;
         size_t plen;
         int handle;
@@ -562,15 +562,10 @@ void cmd_anki_vehicle_set_speed_simple(int speed_, int accel_)
                 return;
         }
 
-        if (argcp < 2) {
-                rl_printf("Usage: %s <new value>\n", argvp[0]);
-                return;
-        }
-
         handle = vehicle.write_char.value_handle;
 
-        int16_t speed = (int16_t)speed_;
-        int16_t accel = (int16_t)accel_;
+        int16_t speed = (int16_t)speedd;
+        int16_t accel = (int16_t)accell;
         /*if (argcp > 2) {
            accel = atoi(argvp[2]);
 	   }*/
@@ -584,7 +579,7 @@ void cmd_anki_vehicle_set_speed_simple(int speed_, int accel_)
                                         NULL, NULL);
 }
 
-void cmd_anki_vehicle_change_lane_simple(int hspeed_, int haccel_, float offset)
+void cmd_anki_vehicle_change_lane_simple(int hspeedd, int haccell, float offset)
 {
         if (conn_state != STATE_CONNECTED) {
                 failed("Disconnected\n");
@@ -593,8 +588,8 @@ void cmd_anki_vehicle_change_lane_simple(int hspeed_, int haccel_, float offset)
 
         int handle = vehicle.write_char.value_handle;
 
-        int16_t hspeed = (int16_t)hspeed_;
-        int16_t haccel = (int16_t)haccel_;
+        int16_t hspeed = (int16_t)hspeedd;
+        int16_t haccel = (int16_t)haccell;
         rl_printf("changing lane at %d (accel = %d | offset = %1.2f)\n", hspeed, haccel, offset);
 
         anki_vehicle_msg_t msg;
@@ -606,22 +601,17 @@ void cmd_anki_vehicle_change_lane_simple(int hspeed_, int haccel_, float offset)
         gatt_write_char(attrib, handle, (uint8_t*)&lane_msg, lane_plen, NULL, NULL);
 }
 
-void cmd_anki_vehicle_goto_lane_simple(int hspeed_, int haccel_, float offset)
+void cmd_anki_vehicle_goto_lane_simple(int hspeedd, int haccell, float offset)
 {
         if (conn_state != STATE_CONNECTED) {
                 failed("Disconnected\n");
                 return;
         }
 
-        if (argcp < 3) {
-                rl_printf("Usage: %s <horizontal speed (mm/sec)> <horizontal accel (mm/sec^2)> <offset from center (mm)>\n", argvp[0]);
-                return;
-        }
-
         int handle = vehicle.write_char.value_handle;
 
-        int16_t hspeed = (int16_t)hspeed_;
-        int16_t haccel = (int16_t)haccel_;
+        int16_t hspeed = (int16_t)hspeedd;
+        int16_t haccel = (int16_t)haccell;
 
         rl_printf("changing to lane %1.2f (speed = %d | accel = %d)\n", offset, hspeed, haccel);
 
@@ -827,7 +817,7 @@ static void cmd_mtu(int argcp, char **argvp)
 }
 
 
-
+/*
 static struct {
 	const char *cmd;
 	void (*func)(int argcp, char **argvp);
@@ -846,27 +836,27 @@ static struct {
 		"Disconnect from a remote device" },
 	{ "mtu",		cmd_mtu,	"<value>",
 		"Exchange MTU for GATT/ATT" },
-        { "sdk-mode",           cmd_anki_vehicle_sdk_mode,   "[on]",
+        { "sdk-mode",           cmd_anki_vehicle_sdk_mode_simple,   "[on]",
                 "Set SDK Mode"},
-        { "ping",           cmd_anki_vehicle_ping,   "",
+        { "ping",           cmd_anki_vehicle_ping_simple,   "",
                 "Send ping message to vehicle."},
-        { "get-localization-position-update",           cmd_anki_vehicle_get_localization_position_update,   "",
+        { "get-localization-position-update",           cmd_anki_vehicle_get_localization_position_update_simple,   "",
                 "Make vehicle to report its position."},
-	{ "get-version",           cmd_anki_vehicle_get_version,   "",
+	{ "get-version",           cmd_anki_vehicle_get_version_simple,   "",
                 "Request vehicle software version."},
-        { "set-speed",          cmd_anki_vehicle_set_speed,  "<speed> <accel>",
+        { "set-speed",          cmd_anki_vehicle_set_speed_simple,  "<speed> <accel>",
                 "Set vehicle Speed (mm/sec) with acceleration (mm/sec^2)"},
-        { "change-lane",          cmd_anki_vehicle_change_lane,  "<horizontal speed> <horizontal accel> <relative offset> (right(+), left(-))",
+        { "change-lane",          cmd_anki_vehicle_change_lane_simple,  "<horizontal speed> <horizontal accel> <relative offset> (right(+), left(-))",
                 "Change lanes at speed (mm/sec), accel (mm/sec^2) in the specified direction (offset)"},
-        { "goto-lane",          cmd_anki_vehicle_goto_lane,  "<horizontal speed> <horizontal accel> <absolute offset> (right(+), 0: center/init, left(-))",
+        { "goto-lane",          cmd_anki_vehicle_goto_lane_simple,  "<horizontal speed> <horizontal accel> <absolute offset> (right(+), 0: center/init, left(-))",
                 "Change to lane  given by offset at speed (mm/sec), accel (mm/sec^2)"},
-        { "uturn",          cmd_anki_vehicle_uturn,  "",
+        { "uturn",          cmd_anki_vehicle_uturn_simple,  "",
                 "Perform U-turn"},
         { "set-lights-pattern",          cmd_anki_vehicle_lights_pattern,  "<channel> <effect> <start> <end> <cycles_per_min>",
                 "Set lights pattern for vehicle LEDs."},
         { "set-engine-lights",          cmd_anki_vehicle_engine_lights,  "<red> <green> <blue> <effect> <cycles_per_min>",
                 "Set the pattern for the engine lights."},
-        { "vehicle-disconnect",          cmd_anki_vehicle_disconnect,  "",
+        { "vehicle-disconnect",          cmd_anki_vehicle_disconnect_simple,  "",
                 "Request that the vehicle disconnect (often more reliable than disconnect)"},
 	{ "send-data-req",	cmd_anki_vehicle_write,	"<new value>",
 		"Write data to vehicle (Request response)" },
@@ -886,8 +876,8 @@ void cmd_help(int argcp, char **argvp)
 	for (i = 0; commands[i].cmd; i++)
 		rl_printf("%-15s %-30s %s\n", commands[i].cmd,
 				commands[i].params, commands[i].desc);
-}
-
+				}*/
+/*
 static void parse_line(char *line_read)
 {
 	char **argvp;
@@ -923,8 +913,8 @@ static void parse_line(char *line_read)
 
 done:
 	free(line_read);
-}
-
+	}*/
+/*
 static gboolean prompt_read(GIOChannel *chan, GIOCondition cond,
 							gpointer user_data)
 {
@@ -1020,7 +1010,9 @@ static gboolean signal_handler(GIOChannel *channel, GIOCondition condition,
 
 	return TRUE;
 }
+*/
 
+/*
 static guint setup_signalfd(void)
 {
 	GIOChannel *channel;
@@ -1057,6 +1049,7 @@ static guint setup_signalfd(void)
 
 	return source;
 }
+*/
 /*
 int interactive(const char *src, const char *dst,
 		const char *dst_type, int psm)
