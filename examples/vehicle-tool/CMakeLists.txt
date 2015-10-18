@@ -20,12 +20,6 @@ set(vehicleTool_SOURCES
                 display.c
 )
 endif()
-if (BUILD_PROJECT)
-set(vehicleTool_SOURCES
-                vehicle_cmd_simple.c
-                display.c
-)
-endif ()
 
 add_executable(vehicle-tool ${vehicleTool_SOURCES})
 target_link_libraries(vehicle-tool

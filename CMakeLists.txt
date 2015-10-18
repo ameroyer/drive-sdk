@@ -44,7 +44,6 @@ if (BUILD_PROJECT)
                     )
     set(Project_SOURCES
                 main.c
-                examples/vehicle-tool/vehicle_cmd_simple.c
 		examples/vehicle-tool/vehicle_cmd.c
                 examples/vehicle-tool/display.c
 		FlyExamples/FlyClient/FlyClient.c
@@ -56,6 +55,7 @@ if (BUILD_PROJECT)
                     ${GLIB2_LIBRARIES}
                     ${READLINE_LIBRARY}
 		    flycapture
+		    pthread
 		    )
     install(TARGETS main 
 	RUNTIME DESTINATION bin
