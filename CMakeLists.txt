@@ -40,12 +40,14 @@ if (BUILD_PROJECT)
                     ${bzle_SOURCE_DIR}/include
                     ${GLIB2_INCLUDE_DIRS}
                     ${READLINE_INCLUDE_DIR}
+		    /usr/include/flycapture
                     )
     set(Project_SOURCES
                 main.c
                 examples/vehicle-tool/vehicle_cmd_simple.c
 		examples/vehicle-tool/vehicle_cmd.c
                 examples/vehicle-tool/display.c
+		FlyExamples/FlyClient/FlyClient.c
 		)
     add_executable(main ${Project_SOURCES})
     target_link_libraries(main
@@ -53,6 +55,7 @@ if (BUILD_PROJECT)
                     bzle
                     ${GLIB2_LIBRARIES}
                     ${READLINE_LIBRARY}
+		    flycapture
 		    )
     install(TARGETS main 
 	RUNTIME DESTINATION bin

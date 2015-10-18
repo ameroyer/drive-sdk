@@ -12,6 +12,7 @@
 // rho E6:D8:52:F1:D9:43
 
 int main(int argc, char *argv[]) {
+  GrabImagesFromSharedMemory(1);  
   cmd_connect_simple("D8:64:85:29:01:C0", "random");
   cmd_anki_vehicle_sdk_mode_simple(1);
   cmd_anki_vehicle_set_speed_simple(500, 25000);
