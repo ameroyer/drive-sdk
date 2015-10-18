@@ -96,7 +96,7 @@ void GrabImagesFromSharedMemory( int numImagesToGrab )
     if ( shmdt(shm) == -1) { perror("shmdt"); exit(1); } 
     
 }
-
+/*
 int main(int argc, char** argv)
 {        
     const int k_numImages = 10;
@@ -108,4 +108,4 @@ int main(int argc, char** argv)
 
     return 0;
 }
-
+*/
