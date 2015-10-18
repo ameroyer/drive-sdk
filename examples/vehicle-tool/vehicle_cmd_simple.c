@@ -476,7 +476,7 @@ void cmd_anki_vehicle_disconnect_simple()
                                         NULL, NULL);
 }
 
-static cmd_anki_vehicle_sdk_mode(int argcp, char **argvp)
+void cmd_anki_vehicle_sdk_mode(int arg)
 {
         uint8_t *value;
         size_t plen;
@@ -487,14 +487,7 @@ static cmd_anki_vehicle_sdk_mode(int argcp, char **argvp)
                 return;
         }
 
-        if (argcp < 2) {
-                rl_printf("Usage: %s <new value>\n", argvp[0]);
-                return;
-        }
-
         handle = vehicle.write_char.value_handle;
-
-        int arg = atoi(argvp[1]);
 
         anki_vehicle_msg_t msg;
         plen = anki_vehicle_msg_set_sdk_mode(&msg, arg, ANKI_VEHICLE_SDK_OPTION_OVERRIDE_LOCALIZATION);
