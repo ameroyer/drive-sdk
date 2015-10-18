@@ -70,15 +70,16 @@ static enum state {
 } conn_state;
 
 #define error(fmt, arg...) \
-	rl_printf(COLOR_RED "Error: " COLOR_OFF fmt, ## arg)
+	rl_printf_simple(COLOR_RED "Error: " COLOR_OFF fmt, ## arg)
 
 #define failed(fmt, arg...) \
-	rl_printf(COLOR_RED "Command Failed: " COLOR_OFF fmt, ## arg)
+	rl_printf_simple(COLOR_RED "Command Failed: " COLOR_OFF fmt, ## arg)
 
+
+// Set vehicle state
 static void set_state(enum state st)
 {
 	conn_state = st;
-	//rl_set_prompt(get_prompt());
 }
 
 static void handle_vehicle_msg_response(const uint8_t *data, uint16_t len)
