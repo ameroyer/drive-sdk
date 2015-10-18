@@ -8,6 +8,10 @@
 
 /***
 List of command calls
+* cmd_anki_vehicle_read_simple(1, char* name)
+
+
+* cmd_anki_vehicle_disconnect_simple()
 * Note to check: some command are already defined in non static somewher, eg cmnd_anki_vehicle_sdk_mode
 *///
 
