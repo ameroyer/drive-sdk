@@ -62,3 +62,14 @@ void rl_printf(const char *fmt, ...)
 		free(saved_line);
 	}
 }
+
+
+
+void rl_printf_simple(const char *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+}

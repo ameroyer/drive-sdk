@@ -75,36 +75,10 @@ static enum state {
 #define failed(fmt, arg...) \
 	rl_printf(COLOR_RED "Command Failed: " COLOR_OFF fmt, ## arg)
 
-static char *get_prompt(void)
-{
-	if (conn_state == STATE_CONNECTED)
-		g_string_assign(prompt, COLOR_BLUE);
-	else
-		g_string_assign(prompt, "");
-
-	if (opt_dst)
-		g_string_append_printf(prompt, "[%17s]", opt_dst);
-	else
-		g_string_append_printf(prompt, "[%17s]", "");
-
-	if (conn_state == STATE_CONNECTED)
-		g_string_append(prompt, COLOR_OFF);
-
-	if (opt_psm)
-		g_string_append(prompt, "[BR]");
-	else
-		g_string_append(prompt, "[LE]");
-
-	g_string_append(prompt, "> ");
-
-	return prompt->str;
-}
-
-
 static void set_state(enum state st)
 {
 	conn_state = st;
-	rl_set_prompt(get_prompt());
+	//rl_set_prompt(get_prompt());
 }
 
 static void handle_vehicle_msg_response(const uint8_t *data, uint16_t len)
@@ -476,7 +450,7 @@ void cmd_anki_vehicle_disconnect_simple()
                                         NULL, NULL);
 }
 
-void cmd_anki_vehicle_sdk_mode(int arg)
+void cmd_anki_vehicle_sdk_mode_simple(int arg)
 {
         uint8_t *value;
         size_t plen;
@@ -497,7 +471,7 @@ void cmd_anki_vehicle_sdk_mode(int arg)
                                         NULL, NULL);
 }
 
-static void cmd_anki_vehicle_ping(int argcp, char **argvp)
+void cmd_anki_vehicle_ping_simple()
 {
         uint8_t *value;
         size_t plen;
@@ -505,11 +479,6 @@ static void cmd_anki_vehicle_ping(int argcp, char **argvp)
 
         if (conn_state != STATE_CONNECTED) {
                 failed("Disconnected\n");
-                return;
-        }
-
-        if (argcp < 1) {
-                rl_printf("Usage: %s\n", argvp[0]);
                 return;
         }
 
@@ -522,7 +491,7 @@ static void cmd_anki_vehicle_ping(int argcp, char **argvp)
         gatt_write_char(attrib, handle, value, plen, NULL, NULL);
 }
 
-static void cmd_anki_vehicle_uturn(int argcp, char **argvp)
+void cmd_anki_vehicle_uturn_simple()
 {
         uint8_t *value;
         size_t plen;
@@ -530,11 +499,6 @@ static void cmd_anki_vehicle_uturn(int argcp, char **argvp)
 
         if (conn_state != STATE_CONNECTED) {
                 failed("Disconnected\n");
-                return;
-        }
-
-        if (argcp < 1) {
-                rl_printf("Usage: %s\n", argvp[0]);
                 return;
         }
 
@@ -547,7 +511,7 @@ static void cmd_anki_vehicle_uturn(int argcp, char **argvp)
         gatt_write_char(attrib, handle, value, plen, NULL, NULL);
 }
 
-static void cmd_anki_vehicle_get_version(int argcp, char **argvp)
+void cmd_anki_vehicle_get_version_simple()
 {
         uint8_t *value;
         size_t plen;
@@ -555,11 +519,6 @@ static void cmd_anki_vehicle_get_version(int argcp, char **argvp)
 
         if (conn_state != STATE_CONNECTED) {
                 failed("Disconnected\n");
-                return;
-        }
-
-        if (argcp < 1) {
-                rl_printf("Usage: %s\n", argvp[0]);
                 return;
         }
 
@@ -572,7 +531,7 @@ static void cmd_anki_vehicle_get_version(int argcp, char **argvp)
         gatt_write_char(attrib, handle, value, plen, NULL, NULL);
 }
 
-static void cmd_anki_vehicle_get_localization_position_update(int argcp, char **argvp)
+void cmd_anki_vehicle_get_localization_position_update()
 {
         uint8_t *value;
         size_t plen;
@@ -580,11 +539,6 @@ static void cmd_anki_vehicle_get_localization_position_update(int argcp, char **
 
         if (conn_state != STATE_CONNECTED) {
                 failed("Disconnected\n");
-                return;
-        }
-
-        if (argcp < 1) {
-                rl_printf("Usage: %s\n", argvp[0]);
                 return;
         }
 
@@ -597,8 +551,7 @@ static void cmd_anki_vehicle_get_localization_position_update(int argcp, char **
         gatt_write_char(attrib, handle, value, plen, NULL, NULL);
 }
 
-static void cmd_anki_vehicle_set_speed(int argcp, char **argvp)
-{
+void cmd_anki_vehicle_set_speed_simple(int speed_, int accel_)
         uint8_t *value;
         size_t plen;
         int handle;
@@ -615,11 +568,11 @@ static void cmd_anki_vehicle_set_speed(int argcp, char **argvp)
 
         handle = vehicle.write_char.value_handle;
 
-        int16_t speed = (int16_t)atoi(argvp[1]);
-        int16_t accel = 25000;
-        if (argcp > 2) {
+        int16_t speed = (int16_t)speed_;
+        int16_t accel = (int16_t)accel_;
+        /*if (argcp > 2) {
            accel = atoi(argvp[2]);
-        }
+	   }*/
         rl_printf("setting speed to %d (accel = %d)\n", speed, accel);
 
         anki_vehicle_msg_t msg;
@@ -630,26 +583,17 @@ static void cmd_anki_vehicle_set_speed(int argcp, char **argvp)
                                         NULL, NULL);
 }
 
-static void cmd_anki_vehicle_change_lane(int argcp, char **argvp)
+void cmd_anki_vehicle_change_lane_simple(int hspeed_, int haccel_, float offset)
 {
         if (conn_state != STATE_CONNECTED) {
                 failed("Disconnected\n");
                 return;
         }
 
-        if (argcp < 3) {
-                rl_printf("Usage: %s <horizontal speed (mm/sec)> <horizontal accel (mm/sec^2)> <offset (mm)>\n", argvp[0]);
-                return;
-        }
-
         int handle = vehicle.write_char.value_handle;
 
-        int16_t hspeed = (int16_t)atoi(argvp[1]);
-        int16_t haccel = (int16_t)atoi(argvp[2]);
-        float offset = 1.0;
-        if (argcp > 3) {
-            offset = strtof(argvp[3], NULL);
-        }
+        int16_t hspeed = (int16_t)hspeed_;
+        int16_t haccel = (int16_t)haccel_;
         rl_printf("changing lane at %d (accel = %d | offset = %1.2f)\n", hspeed, haccel, offset);
 
         anki_vehicle_msg_t msg;
@@ -661,7 +605,7 @@ static void cmd_anki_vehicle_change_lane(int argcp, char **argvp)
         gatt_write_char(attrib, handle, (uint8_t*)&lane_msg, lane_plen, NULL, NULL);
 }
 
-static void cmd_anki_vehicle_goto_lane(int argcp, char **argvp)
+void cmd_anki_vehicle_goto_lane_simple(int hspeed_, int haccel_, float offset)
 {
         if (conn_state != STATE_CONNECTED) {
                 failed("Disconnected\n");
@@ -675,18 +619,17 @@ static void cmd_anki_vehicle_goto_lane(int argcp, char **argvp)
 
         int handle = vehicle.write_char.value_handle;
 
-        int16_t hspeed = (int16_t)atoi(argvp[1]);
-        int16_t haccel = (int16_t)atoi(argvp[2]);
-        float offset = 1.0;
-        if (argcp > 3) {
-            offset = strtof(argvp[3], NULL);
-        }
+        int16_t hspeed = (int16_t)hspeed_;
+        int16_t haccel = (int16_t)haccel_;
+
         rl_printf("changing to lane %1.2f (speed = %d | accel = %d)\n", offset, hspeed, haccel);
 
         anki_vehicle_msg_t lane_msg;
         size_t lane_plen = anki_vehicle_msg_change_lane(&lane_msg, hspeed, haccel, offset);
         gatt_write_char(attrib, handle, (uint8_t*)&lane_msg, lane_plen, NULL, NULL);
 }
+
+
 
 /*
 anki_vehicle_light_channel_t get_channel_by_name(const char *name)
@@ -881,6 +824,8 @@ static void cmd_mtu(int argcp, char **argvp)
 
 	gatt_exchange_mtu(attrib, opt_mtu, exchange_mtu_cb, NULL);
 }
+
+
 
 static struct {
 	const char *cmd;
