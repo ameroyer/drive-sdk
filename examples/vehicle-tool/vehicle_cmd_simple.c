@@ -362,6 +362,7 @@ static int strtohandle(const char *src)
 	return dst;
 }
 
+///STQRT
 static void cmd_anki_vehicle_read(int argcp, char **argvp)
 {
 	if (conn_state != STATE_CONNECTED) {
@@ -454,7 +455,7 @@ static void cmd_anki_vehicle_write(int argcp, char **argvp)
         g_free(value);
 }
 
-static void cmd_anki_vehicle_disconnect(int argcp, char **argvp)
+void cmd_anki_vehicle_disconnect_simple()
 {
         uint8_t *value;
         size_t plen;
@@ -462,11 +463,6 @@ static void cmd_anki_vehicle_disconnect(int argcp, char **argvp)
 
         if (conn_state != STATE_CONNECTED) {
                 failed("Disconnected\n");
-                return;
-        }
-
-        if (argcp < 1) {
-                rl_printf("Usage: %s\n", argvp[0]);
                 return;
         }
 
