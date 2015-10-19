@@ -15,6 +15,7 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stdio.h>
 
 #include <bzle/bluetooth/bluetooth.h>
 #include <bzle/bluetooth/hci.h>
@@ -125,9 +126,9 @@ void start_interactive(char* pipe)
 
 
 // boson D9:81:41:5C:D4:31 [gray]
-// katal D8:64:85:29:01:C0
-// kourai EB:0D:D8:05:CA:1A
-// rho E6:D8:52:F1:D9:43
+// katal D8:64:85:29:01:C0 [blue]
+// kourai EB:0D:D8:05:CA:1A [yellow]
+// rho E6:D8:52:F1:D9:43 [red]
 
 
 int main(int argc, char *argv[]) {
@@ -148,8 +149,20 @@ int main(int argc, char *argv[]) {
   while(!start) {}
 
   // Launch commands
-  send_command(pipe, "connect");
+  send_command(pipe, "connect"); 
+  sleep(2);
+  send_command(pipe, "sdk-mode 1");
+  int i;
+	int speed = 0;
+	char cmd [50];
+  for(i=1;i<10;i++){
+	speed = i * 100;
+	sprintf(cmd, "set-speed %d", speed);
+	send_command(pipe, cmd);
+ 	sleep(2);
+  }
   send_command(pipe, "set-speed 500");
+  sleep(5);
   send_command(pipe, "vehicle-disconnect");
   send_command(pipe, "exit");
 
