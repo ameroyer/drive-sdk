@@ -44,8 +44,8 @@ if (BUILD_PROJECT)
                     )
     set(Project_SOURCES
                 main.c
-		examples/vehicle-tool/vehicle_cmd.c
-                examples/vehicle-tool/display.c
+		examples/simple-c-interface/anki-simplified.h
+		examples/simple-c-interface/anki-simplified.c
 		FlyExamples/FlyClient/FlyClient.c
 		)
     add_executable(main ${Project_SOURCES})
@@ -55,7 +55,6 @@ if (BUILD_PROJECT)
                     ${GLIB2_LIBRARIES}
                     ${READLINE_LIBRARY}
 		    flycapture
-		    pthread
 		    )
     install(TARGETS main 
 	RUNTIME DESTINATION bin
