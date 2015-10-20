@@ -4,200 +4,83 @@
  */
 
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#include <errno.h>
-#include <glib.h>
+#include "examples/simple-c-interface/anki-simplified.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdio.h>
-
-#include <bzle/bluetooth/bluetooth.h>
-#include <bzle/bluetooth/hci.h>
-#include <bzle/bluetooth/hci_lib.h>
-#include <bzle/bluetooth/uuid.h>
-#include <bzle/gatt/att.h>
-#include <bzle/bluetooth/btio.h>
-#include <bzle/gatt/gattrib.h>
-#include <bzle/gatt/gatt.h>
-#include <bzle/gatt/utils.h>
-
-static char *opt_src = NULL;
-static char *opt_dst = NULL;
-static char *opt_dst_type = NULL;
-static char *opt_value = NULL;
-static char *opt_sec_level = NULL;
-static bt_uuid_t *opt_uuid = NULL;
-static int opt_handle = -1;
-static int opt_mtu = 0;
-static int opt_psm = 0;
-static GMainLoop *event_loop;
-static gboolean got_error = FALSE;
-static GSourceFunc operation;
-
-struct characteristic_data {
-  GAttrib *attrib;
-  uint16_t start;
-  uint16_t end;
-};
-
-static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data) 
-{
-  GAttrib *attrib = user_data;
-  uint8_t *opdu;
-  uint16_t handle, i, olen = 0;
-  size_t plen;
-  handle = att_get_u16(&pdu[1]);
-  switch (pdu[0]) {
-  case ATT_OP_HANDLE_NOTIFY:
-    g_print("Notification handle = 0x%04x value: ", handle);
-    break;
-  case ATT_OP_HANDLE_IND:
-    g_print("Indication   handle = 0x%04x value: ", handle);
-    break;
-  default:
-    g_print("Invalid opcode\n");
-    return;
-  }
-
-  for (i = 3; i < len; i++)
-    g_print("%02x ", pdu[i]);
-
-  g_print("\n");
-
-  if (pdu[0] == ATT_OP_HANDLE_NOTIFY)
-    return;
-
-  opdu = g_attrib_get_buffer(attrib, &plen);
-  olen = enc_confirmation(opdu, plen);
-
-  if (olen > 0)
-    g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
-}
-
-static GOptionEntry options[] = {
-  { "adapter", 'i', 0, G_OPTION_ARG_STRING, &opt_src,
-    "Specify local adapter interface", "hciX" },
-  { "device", 'b', 0, G_OPTION_ARG_STRING, &opt_dst,
-    "Specify remote Bluetooth address", "MAC" },
-  { "addr-type", 't', 0, G_OPTION_ARG_STRING, &opt_dst_type,
-    "Set LE address type. Default: random", "[public | random]"},
-  { "mtu", 'm', 0, G_OPTION_ARG_INT, &opt_mtu,
-    "Specify the MTU size", "MTU" },
-  { "psm", 'p', 0, G_OPTION_ARG_INT, &opt_psm,
-    "Specify the PSM for GATT/ATT over BR/EDR", "PSM" },
-  { "sec-level", 'l', 0, G_OPTION_ARG_STRING, &opt_sec_level,
-    "Set security level. Default: low", "[low | medium | high]"},
-  { NULL },
-};
-
-void start_interactive(char* pipe) 
-{
-  GOptionContext *context;
-  GOptionGroup *gatt_group, *params_group, *char_rw_group;
-  GError *gerr = NULL;
-  GIOChannel *chan;
-  //Default
-  opt_dst_type = g_strdup("random");
-  opt_sec_level = g_strdup("low");
-  opt_src = g_strdup("hci0");
-  opt_psm = 0;
-
-  context = g_option_context_new(NULL);
-  g_option_context_add_main_entries(context, options, NULL);
-
-  interactive_from_file(opt_src, opt_dst, opt_dst_type, opt_psm, pipe);
- done:
-  g_option_context_free(context);
-  g_free(opt_src);
-  g_free(opt_dst);
-  g_free(opt_uuid);
-  g_free(opt_sec_level);
-  if (got_error)
-    exit(EXIT_FAILURE);
-  else
-    exit(EXIT_SUCCESS);
-}
 
 
-// boson D9:81:41:5C:D4:31 [gray]
-// katal D8:64:85:29:01:C0 [blue]
-// kourai EB:0D:D8:05:CA:1A [yellow]
-// rho E6:D8:52:F1:D9:43 [red]
-
+/**
+ * Return car's MAC address given color or name
+ */
 char* get_car_mac(char* color) {
-  if ((color == "grey") || (color == "boson") || (color == "gray")) {
-    return "D9:81:41:5C:D4:31"; 
-  }
-  else if ((color == "blue") || (color == "katal")) {
-    return "D8:64:85:29:01:C0";
-  }
-  else if ((color == "koural") || (color == "yellow")) {
-    return "EB:0D:D8:05:CA:1A";
-  }
-  else {
-    return "E6:D8:52:F1:D9:43";
-  }
+    if ((color == "grey") || (color == "boson") || (color == "gray")) {
+        return "D9:81:41:5C:D4:31"; 
+    }
+    else if ((color == "blue") || (color == "katal")) {
+        return "D8:64:85:29:01:C0";
+    }
+    else if ((color == "koural") || (color == "yellow")) {
+        return "EB:0D:D8:05:CA:1A";
+    }
+    else {
+        return "E6:D8:52:F1:D9:43";
+    }
 } 
 
+/**
+ *  Print car's current location
+ */
+void print_loc(AnkiHandle h){
+    localization_t loc;
+    loc = anki_s_get_localization(h);
+    printf("Location: segm: %03x subsegm: %03x clock-wise: %i last-update: %i\n",
+	 loc.segm, loc.subsegm, loc.is_clockwise, loc.update_time);
+}
 
 
 
-//Main Routine
+/**
+ * Main routine
+ **/
 int main(int argc, char *argv[]) {
-  // Example: Take picture
-  GrabImagesFromSharedMemory(1);  
+// Example: Take picture
+GrabImagesFromSharedMemory(1);  
 
-  // Create pipe an dempty it
-  int fd;
-  char* pipe = "communication_pipe.txt";
-  fclose(fopen(pipe, "w"));
+// Read parameters
+if(argc<2){
+fprintf(stderr, "usage: %s car-name [adaptater] [verbose]\n",argv[0]);
+exit(0);
+}
+const char* adapter = "hci0";
+const char* car_id  = get_car_mac(argv[2]);
+if (argc > 2) {
+adapter = argv[2];
+}
 
-  // Global variables modified  in vehicle_cmd
-  extern int vehicle_start; //True iff the main event loop is set up
-  extern int vehicle_connected; //True iff the vehicle is connected
-  //Get car MAC address
-  char* car = "";
-  if (argc > 1) {
-    car = get_car_mac(argv[1]);
-  }
-  opt_dst = g_strdup(car);
-  // Launch event loop
-  pthread_t t;
-  int ret = pthread_create (&t, NULL, (void *)start_interactive, pipe);
+// Init bluethooth and wait for connection successful
+AnkiHandle h = anki_s_init(adapter, car_id, argc>3);
+printf( anki_s_is_connected(h));
+while(!anki_s_is_connected(h)) {};
 
-  // Wait for the event loop to be initialized
-  while(!vehicle_start) {}
-  // Wait for connection
-  send_command(pipe, "connect"); 
-  while(!vehicle_connected) {}
-  send_command(pipe, "sdk-mode 1");
-
-
-  // Main code: Send commands to car
-  int i;
-  int speed = 0;
-  char cmd [50];
-  for(i=1;i<10;i++){
-    speed = i * 100;
-    sprintf(cmd, "set-speed %d", speed);
-    send_command(pipe, cmd);
-    sleep(2);
-  }
-  send_command(pipe, "set-speed 500");
-  sleep(5);
-
-
-  // Disconnect vehicle and join thread
-  send_command(pipe, "vehicle-disconnect");
-  send_command(pipe, "exit");
-  void* retj = NULL;
-  pthread_join(t, &retj);
-
-  return 0;
+int i;
+if(anki_s_set_speed(h,1000,20000)!=0) return 1;
+//for(i=0; i<10; i++){ usleep(200000); anki_s_change_lane(h,-40,100,1000); }  
+for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
+anki_s_set_speed(h,500,20000);
+for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
+anki_s_change_lane(h,-50,100,1000);
+for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
+anki_s_set_speed(h,0,20000);
+sleep(1);
+anki_s_close(h);
+sleep(2);
+AnkiHandle h2 = anki_s_init(adapter, car_id, argc>3);  
+usleep(500000);
+if(anki_s_set_speed(h2,1000,20000)!=0) return 1;
+for(i=0; i<5; i++){ usleep(200000);  print_loc(h);  }
+anki_s_set_speed(h2,0,20000);
+usleep(200000);
+anki_s_close(h2);
+return 0;
 }

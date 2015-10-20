@@ -67,7 +67,7 @@
 #include <bzle/gatt/utils.h>
 #include <ankidrive.h>
 
-#include <anki-simplified.h>
+#include "anki-simplified.h"
 
 typedef struct anki_vehicle {
   struct gatt_char read_char;
