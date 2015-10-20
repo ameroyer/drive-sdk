@@ -162,36 +162,37 @@ static void set_state(enum state st)
 
 static void handle_vehicle_msg_response(const uint8_t *data, uint16_t len)
 {
-  if (len > sizeof(anki_vehicle_msg_t)) {
-    error("Invalid vehicle response\n");
-    return;
-  }
+        if (len > sizeof(anki_vehicle_msg_t)) {
+                error("Invalid vehicle response\n");
+                return;
+        }
 
-  const anki_vehicle_msg_t *msg = (const anki_vehicle_msg_t *)data;
-  switch(msg->msg_id) {
-  case ANKI_VEHICLE_MSG_V2C_PING_RESPONSE:
-    {
-      rl_printf("[read] PING_RESPONSE\n");
-      break;
-    }
-  case ANKI_VEHICLE_MSG_V2C_VERSION_RESPONSE:
-    {
-      const anki_vehicle_msg_version_response_t *m = (const anki_vehicle_msg_version_response_t *)msg;
-      rl_printf("[read] VERSION_RESPONSE: 0x%04x\n", m->version);
+        const anki_vehicle_msg_t *msg = (const anki_vehicle_msg_t *)data;
+        switch(msg->msg_id) {
+        case ANKI_VEHICLE_MSG_V2C_PING_RESPONSE:
+        {
+                    rl_printf("[read] PING_RESPONSE\n");
+                    break;
+        }
+        case ANKI_VEHICLE_MSG_V2C_VERSION_RESPONSE:
+        {
+                    const anki_vehicle_msg_version_response_t *m = (const anki_vehicle_msg_version_response_t *)msg;
+                    rl_printf("[read] VERSION_RESPONSE: 0x%04x\n", m->version);
 
-      break;
-    }
-  case ANKI_VEHICLE_MSG_V2C_LOCALIZATION_POSITION_UPDATE:
-    {
-      const anki_vehicle_msg_localization_position_update_t *m = (const anki_vehicle_msg_localization_position_update_t *)msg;
-      rl_printf("[read] LOCALE_UPDATE: localisationID: %02x pieceID: %02x\n", m->_reserved[0],m->_reserved[1]);
+                    break;
+        }
+        case ANKI_VEHICLE_MSG_V2C_LOCALIZATION_POSITION_UPDATE:
+        {
+                    const anki_vehicle_msg_localization_position_update_t *m = (const anki_vehicle_msg_localization_position_update_t *)msg;
+                    rl_printf("[read] LOCALE_UPDATE: localisationID: %02x pieceID: %02x\toffset %f\tclockwise %i\n", m->_reserved[0],m->_reserved[1], m->offset_from_road_center_mm, m->is_clockwise);
 
-      break;
-    }
-  default:
-    // rl_printf("Received unhandled vehicle message of type 0x%02x\n", msg->msg_id);
-    break;
-  }
+
+                    break;
+        }
+        default:
+                    // rl_printf("Received unhandled vehicle message of type 0x%02x\n", msg->msg_id);
+                    break;
+        }
 }
 
 static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
@@ -323,37 +324,37 @@ static gboolean channel_watcher(GIOChannel *chan, GIOCondition cond,
 
 static void cmd_connect(int argcp, char **argvp)
 {
-  GError *gerr = NULL;
+	GError *gerr = NULL;
 
-  if (conn_state != STATE_DISCONNECTED)
-    return;
+	if (conn_state != STATE_DISCONNECTED)
+		return;
 
-  if (argcp > 1) {
-    g_free(opt_dst);
-    opt_dst = g_strdup(argvp[1]);
+	if (argcp > 1) {
+		g_free(opt_dst);
+		opt_dst = g_strdup(argvp[1]);
 
-    g_free(opt_dst_type);
-    if (argcp > 2)
-      opt_dst_type = g_strdup(argvp[2]);
-    else
-      opt_dst_type = g_strdup("public");
-  }
+		g_free(opt_dst_type);
+		if (argcp > 2)
+			opt_dst_type = g_strdup(argvp[2]);
+		else
+			opt_dst_type = g_strdup("public");
+	}
 
-  if (opt_dst == NULL) {
-    error("Remote Bluetooth address required\n");
-    return;
-  }
+	if (opt_dst == NULL) {
+		error("Remote Bluetooth address required\n");
+		return;
+	}
 
-  rl_printf("Attempting to connect to %s\n", opt_dst);
-  set_state(STATE_CONNECTING);
-  iochannel = gatt_connect(opt_src, opt_dst, opt_dst_type, opt_sec_level,
-			   opt_psm, opt_mtu, connect_cb, &gerr);
-  if (iochannel == NULL) {
-    set_state(STATE_DISCONNECTED);
-    error("%s\n", gerr->message);
-    g_error_free(gerr);
-  } else
-    g_io_add_watch(iochannel, G_IO_HUP, channel_watcher, NULL);
+	rl_printf("Attempting to connect to %s\n", opt_dst);
+	set_state(STATE_CONNECTING);
+	iochannel = gatt_connect(opt_src, opt_dst, opt_dst_type, opt_sec_level,
+                                opt_psm, opt_mtu, connect_cb, &gerr, NULL);
+	if (iochannel == NULL) {
+		set_state(STATE_DISCONNECTED);
+		error("%s\n", gerr->message);
+		g_error_free(gerr);
+	} else
+		g_io_add_watch(iochannel, G_IO_HUP, channel_watcher, NULL);
 }
 
 static void cmd_disconnect(int argcp, char **argvp)
