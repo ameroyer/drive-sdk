@@ -14,13 +14,13 @@
  * Return car's MAC address given color or name
  */
 char* get_car_mac(char* color) {
-    if ((color == "grey") || (color == "boson") || (color == "gray")) {
+    if (strcmp(color, "grey") || strcmp(color, "boson") || strcmp(color, "gray")) {
         return "D9:81:41:5C:D4:31"; 
     }
-    else if ((color == "blue") || (color == "katal")) {
+    else if (strcmp(color, "blue") || strcmp(color, "katal")) {
         return "D8:64:85:29:01:C0";
     }
-    else if ((color == "koural") || (color == "yellow")) {
+    else if (strcmp(color, "koural") || strcmp(color, "yellow")) {
         return "EB:0D:D8:05:CA:1A";
     }
     else {
@@ -53,13 +53,12 @@ int main(int argc, char *argv[]) {
 	exit(0);
     }
     const char* adapter = "hci0";
-    const char* car_id  = get_car_mac(argv[2]);
+    const char* car_id  = get_car_mac(argv[1]);
     if (argc > 2) {
 	adapter = argv[2];
     }
-
     // Init bluethooth and wait for connection successful
-    fprintf(stderr, "Attempt connection\n");
+    fprintf(stderr, "Attempting connection\n");
     AnkiHandle h = anki_s_init(adapter, car_id, argc>3);
     while(!anki_s_is_connected(h)) {};
     fprintf(stderr, "Connection successful\n");
