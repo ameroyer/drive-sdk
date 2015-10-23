@@ -103,7 +103,6 @@ void GrabImagesFromSharedMemory( int numImagesToGrab )
  * Given the interface to the sared memory, grab one image and stores the corresponding filename in filename
  */
 void GrabImageFromSharedMemory(char* filename, int shmid, key_t key, shared_struct *shm, const int width, const int height) {    
-    fprintf(stderr, "Get image\n");
     char PPMheader[32];
     snprintf(PPMheader, 31, "P6\n%d %d 255\n", width, height);
     snprintf(filename, 255, "/home/cvml1/Code/Images/fc2TestImage%08ld.ppm", shm->count);

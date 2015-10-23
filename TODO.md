@@ -31,9 +31,9 @@ where:
 
 2. Adding Computer Vision (CV) and Machine Learning (ML) 
 --------------------------------------------------------
-- (CV) Get default background image
+- (CV) Get default background image				[~Done]
 - (CV) Detect where the turns and straight parts of the track are
-- (CV) Detect vehicles' positions (background substraction) []
+- (CV) Detect vehicles' positions (background substraction) []  [Amelie]
 - (CV) Detect red borders/limits of the track
 - (ML) Implement Reinforcement Learning/Q-Learning for the situation with only one car to get the best policy
 
