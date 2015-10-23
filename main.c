@@ -38,15 +38,33 @@ typedef struct {
 } shared_struct;
 
 
+/**
+ * Structure to load PPM image as a simple C array
+ */
+typedef struct {
+     unsigned char red,green,blue;
+} PPMPixel;
+
+typedef struct {
+     int x, y;
+     PPMPixel *data;
+} PPMImage;
+
 
 
 /**
- * Get background image as media image
+ * Get background image as median image
  *
  */
-void get_background_as_median(char** image_sequences){
-    fprintf(stderr, "Compute background\n");
+void get_background_as_median(int len, char image_sequences[][256], char* output){
+    char cmd[1000];
+    sprintf(cmd, "python Python/compute_median.py %s", output);
     int i;
+    for (i = 0; i < len; i++) {
+	strcat(cmd, " ");
+	strcat(cmd, image_sequences[i]);
+    }
+    system(cmd);
 }
 
 
@@ -56,6 +74,7 @@ void get_background_as_median(char** image_sequences){
 struct arg_struct {
     char* vehicle_color;
     char* default_background;
+    char* background;
     int update;
     int background_update;
     int history;
@@ -67,6 +86,7 @@ void update_camera_loc(void* aux) {
     int history = args->history;
     int update = args->update;
     int background_update = args->background_update;
+    char* background = args-> default_background;
 
     // Init parameters
     int shmid;
@@ -82,15 +102,20 @@ void update_camera_loc(void* aux) {
     if ((shm = (shared_struct*)shmat(shmid, NULL, 0)) == (shared_struct *) -1) { perror("shmat"); exit(1); }
 
     // Grab picture every "update"  seconds and update location
-    char arr[20][256];
+    char arr[history][256];
     int index = 0;
-    char imagefile [256];
 
     while (!exit_signal) {
 	if (index && (index % background_update == 0)) {
-	    get_background_as_median(arr);
+	    fprintf(stderr, "Update Background\n");
+	    background = args -> background;
+	    get_background_as_median(history, arr, background);
 	}
+	   fprintf(stderr, "Grab Image\n");
 	GrabImageFromSharedMemory(arr[index % history], shmid, key, shm, width, height);
+	char cmd[500];
+	sprintf(cmd, "python Python/get_locations.py %s %s", arr[index % history], background);
+	system(cmd);
 	//fprintf(stderr, "%s",  a[index]);
 	index += 1;
 	sleep(update);
@@ -142,15 +167,17 @@ int main(int argc, char *argv[]) {
     // Update picture every second and process it  
     struct arg_struct args;
     args.vehicle_color = "grey";
-    args.default_background = "";
+    args.default_background =  "/home/cvml1/Code/Images/default_background.ppm";
+    args.background = "/home/cvml1/Code/Images/background.ppm";
     args.update = 1;
-    args.background_update = 2;
-    args.history = 20;
+    args.background_update = 60;
+    args.history = 10;
 
     pthread_t camera;
     int ret = pthread_create (&camera, 0, (void*)update_camera_loc,  &args);
-    sleep(5);
-    //GrabImagesFromSharedMemory(1);  
+    sleep(1);
+
+
     /*
     // Read parameters
     if(argc<2){
@@ -184,5 +211,6 @@ int main(int argc, char *argv[]) {
     // Disconnect
     anki_s_close(h);*/
     exit_signal = 1;
+    pthread_join(camera, NULL);
     return 0;
 }
