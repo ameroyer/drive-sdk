@@ -43,18 +43,18 @@ if (BUILD_PROJECT)
 		    /usr/include/flycapture
                     )
     set(Project_SOURCES
-                main.c
 		examples/simple-c-interface/anki-simplified.h
 		examples/simple-c-interface/anki-simplified.c
 		FlyExamples/FlyClient/FlyClient.c
 		)
-    add_executable(main ${Project_SOURCES})
+    add_executable(main main.c ${Project_SOURCES})
     target_link_libraries(main
                     ankidrive
                     bzle
                     ${GLIB2_LIBRARIES}
                     ${READLINE_LIBRARY}
 		    flycapture
+		    pthread
 		    )
     install(TARGETS main 
 	RUNTIME DESTINATION bin

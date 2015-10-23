@@ -8,6 +8,101 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
+#include "C/FlyCapture2_C.h"
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <string.h>
+
+static int exit_signal = 0;
+
+/**
+ * Self-localization information
+ */
+typedef struct camera_localization {
+    int x    ;    /// x coordinate
+    int y ;    /// y coordinate
+    int update_time ; /// Last update time (is increased every time we get an update from the car)
+} camera_localization_t
+;
+
+
+/**
+ * Structure result of image grabbed from camera
+ */
+#define IMAGE_SIZE 1920*1200*3
+typedef struct {
+    unsigned char data[IMAGE_SIZE];
+    long count;
+} shared_struct;
+
+
+
+
+/**
+ * Get background image as media image
+ *
+ */
+void get_background_as_median(char** image_sequences){
+    fprintf(stderr, "Compute background\n");
+    int i;
+}
+
+
+/**
+ * Get vehicle's location through camera (runs on independent thread)
+ */
+struct arg_struct {
+    char* vehicle_color;
+    char* default_background;
+    int update;
+    int background_update;
+    int history;
+};
+
+void update_camera_loc(void* aux) {
+    // Read arguments
+    struct arg_struct *args = (struct arg_struct *)aux;
+    int history = args->history;
+    int update = args->update;
+    int background_update = args->background_update;
+
+    // Init parameters
+    int shmid;
+    key_t key;
+    shared_struct *shm;
+    key = 192012003; // 1920x1200x3
+    const int width = 1696;
+    const int height = 720;
+    
+    /* Find shared memory segment.  */
+    if ((shmid = shmget(key, sizeof(shared_struct), 0666)) < 0) { perror("shmget"); exit(1); }
+    /* Attach shared memory segment to our data space.  */
+    if ((shm = (shared_struct*)shmat(shmid, NULL, 0)) == (shared_struct *) -1) { perror("shmat"); exit(1); }
+
+    // Grab picture every "update"  seconds and update location
+    char arr[20][256];
+    int index = 0;
+    char imagefile [256];
+
+    while (!exit_signal) {
+	if (index && (index % background_update == 0)) {
+	    get_background_as_median(arr);
+	}
+	GrabImageFromSharedMemory(arr[index % history], shmid, key, shm, width, height);
+	//fprintf(stderr, "%s",  a[index]);
+	index += 1;
+	sleep(update);
+    }
+    
+    
+    /* Detach local  from shared memory */
+    if ( shmdt(shm) == -1) { perror("shmdt"); exit(1); } 
+
+
+} 
+
 
 
 /**
@@ -35,7 +130,7 @@ void print_loc(AnkiHandle h){
     localization_t loc;
     loc = anki_s_get_localization(h);
     printf("Location: segm: %03x subsegm: %03x clock-wise: %i last-update: %i\n",
-	 loc.segm, loc.subsegm, loc.is_clockwise, loc.update_time);
+	   loc.segm, loc.subsegm, loc.is_clockwise, loc.update_time);
 }
 
 
@@ -44,18 +139,28 @@ void print_loc(AnkiHandle h){
  * Main routine
  **/
 int main(int argc, char *argv[]) {
-   // Example: Take picture
-   GrabImagesFromSharedMemory(1);  
+    // Update picture every second and process it  
+    struct arg_struct args;
+    args.vehicle_color = "grey";
+    args.default_background = "";
+    args.update = 1;
+    args.background_update = 2;
+    args.history = 20;
 
+    pthread_t camera;
+    int ret = pthread_create (&camera, 0, (void*)update_camera_loc,  &args);
+    sleep(5);
+    //GrabImagesFromSharedMemory(1);  
+    /*
     // Read parameters
     if(argc<2){
-	fprintf(stderr, "usage: %s car-name [adaptater] [verbose]\n",argv[0]);
-	exit(0);
+    fprintf(stderr, "usage: %s car-name [adaptater] [verbose]\n",argv[0]);
+    exit(0);
     }
     const char* adapter = "hci0";
     const char* car_id  = get_car_mac(argv[1]);
     if (argc > 2) {
-	adapter = argv[2];
+    adapter = argv[2];
     }
     // Init bluethooth and wait for connection successful
     fprintf(stderr, "Attempting connection\n");
@@ -77,6 +182,7 @@ int main(int argc, char *argv[]) {
     sleep(1);
 
     // Disconnect
-    anki_s_close(h);
+    anki_s_close(h);*/
+    exit_signal = 1;
     return 0;
 }
