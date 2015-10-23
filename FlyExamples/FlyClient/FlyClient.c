@@ -40,9 +40,10 @@ void intHandler(int dummy) {
 
 #define IMAGE_SIZE 1920*1200*3
 typedef struct {
-   unsigned char data[IMAGE_SIZE];
-   long count;
+    unsigned char data[IMAGE_SIZE];
+    long count;
 } shared_struct;
+
 
 
 void GrabImagesFromSharedMemory( int numImagesToGrab )
@@ -69,43 +70,60 @@ void GrabImagesFromSharedMemory( int numImagesToGrab )
     snprintf(PPMheader, 31, "P6\n%d %d 255\n", width, height);
     
     for ( i=0; (i < numImagesToGrab) && keepRunning ; i++ )
-    {
-	char filename[256];
-        snprintf(filename, 255, "fc2TestImage%08ld.ppm", shm->count);
-        FILE *fid = fopen(filename, "wb"); 
-        if (fid == 0) {
-            printf( "Error in fopen.\n");
-            printf( "Please check write permissions.\n");
-            continue;
-        }
-        int res = fwrite( PPMheader, strlen(PPMheader), 1, fid);
-        if (res == 0) {
-            printf( "Error in fwrite header.\n");
-            printf( "Please check write permissions.\n");
-        } else {
-            res = fwrite( shm, 1920*1200*3, 1, fid);   
-            if (res == 0) {
-                printf( "Error in fwrite body.\n");
-                printf( "Please check write permissions.\n");
-            }
-        }
-        fclose(fid);
-    }
+	{
+	    char filename[256];
+	    snprintf(filename, 255, "fc2TestImage%08ld.ppm", shm->count);
+	    FILE *fid = fopen(filename, "wb"); 
+	    if (fid == 0) {
+		printf( "Error in fopen.\n");
+		printf( "Please check write permissions.\n");
+		continue;
+	    }
+	    int res = fwrite( PPMheader, strlen(PPMheader), 1, fid);
+	    if (res == 0) {
+		printf( "Error in fwrite header.\n");
+		printf( "Please check write permissions.\n");
+	    } else {
+		res = fwrite( shm, 1920*1200*3, 1, fid);   
+		if (res == 0) {
+		    printf( "Error in fwrite body.\n");
+		    printf( "Please check write permissions.\n");
+		}
+	    }
+	    fclose(fid);
+	}
 
     /* detach local  from shared memory */
     if ( shmdt(shm) == -1) { perror("shmdt"); exit(1); } 
     
 }
-/*
-int main(int argc, char** argv)
-{        
-    const int k_numImages = 10;
 
-    GrabImagesFromSharedMemory( k_numImages );   
 
-    printf( "Done! \n" );
- //   getchar();
-
-    return 0;
+/**
+ * Given the interface to the sared memory, grab one image and stores the corresponding filename in filename
+ */
+void GrabImageFromSharedMemory(char* filename, int shmid, key_t key, shared_struct *shm, const int width, const int height) {    
+    fprintf(stderr, "Get image\n");
+    char PPMheader[32];
+    snprintf(PPMheader, 31, "P6\n%d %d 255\n", width, height);
+    snprintf(filename, 255, "/home/cvml1/Code/Images/fc2TestImage%08ld.ppm", shm->count);
+    FILE *fid = fopen(filename, "wb"); 
+    int res = fwrite( PPMheader, strlen(PPMheader), 1, fid);
+    res = fwrite( shm, 1920*1200*3, 1, fid);   
+    fclose(fid);   
 }
+
+
+/*
+  int main(int argc, char** argv)
+  {        
+  const int k_numImages = 10;
+
+  GrabImagesFromSharedMemory( k_numImages );   
+
+  printf( "Done! \n" );
+  //   getchar();
+
+  return 0;
+  }
 */

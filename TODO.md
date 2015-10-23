@@ -9,12 +9,14 @@ TODO LIST - CVML Project
 - PieceID = ID of the track piece the vehicle is on (8 pieces)
 - LocalisationID = ID of the horizontal "dash" the vehicle is on
 
-
-0. I/O management
------------------
-- Wait for "connection successful" before inputing new commands [Done]
-- Get the vehicle's location as a return variable instead of printed on screen []
-----> using Georg's code instead
+0. Main
+-------
+Build script: ./build.sh
+Run: ./build/dist/bin/main [name] [adaptater] [verbose]
+where:
+ - [name] is the color (eg grey) or name of the vehicle (eg boson)
+ - [adapter] is the bluetooth adapter (optionaal, defaults to hci0)
+ - [verbose] increases verbosity output
 
 
 1. Basic features, using only position (Goal: 1 car, 10 laps, optimize time)
@@ -29,8 +31,9 @@ TODO LIST - CVML Project
 
 2. Adding Computer Vision (CV) and Machine Learning (ML) 
 --------------------------------------------------------
+- (CV) Get default background image
 - (CV) Detect where the turns and straight parts of the track are
-- (CV) Detect vehicles' positions (background substraction)
+- (CV) Detect vehicles' positions (background substraction) []
 - (CV) Detect red borders/limits of the track
 - (ML) Implement Reinforcement Learning/Q-Learning for the situation with only one car to get the best policy
 
