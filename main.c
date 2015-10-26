@@ -15,11 +15,17 @@
 #include <sys/shm.h>
 #include <string.h>
 
-static int exit_signal = 0;
-
 /**
- * Self-localization information
+ * Structures types
  */
+// Camera images
+#define IMAGE_SIZE 1920*1200*3
+typedef struct {
+    unsigned char data[IMAGE_SIZE];
+    long count;
+} shared_struct;
+
+// Position from camera
 typedef struct camera_localization {
     int x    ;    /// x coordinate
     int y ;    /// y coordinate
@@ -28,27 +34,11 @@ typedef struct camera_localization {
 ;
 
 
-/**
- * Structure result of image grabbed from camera
+/** 
+ * Global variables
  */
-#define IMAGE_SIZE 1920*1200*3
-typedef struct {
-    unsigned char data[IMAGE_SIZE];
-    long count;
-} shared_struct;
-
-
-/**
- * Structure to load PPM image as a simple C array
- */
-typedef struct {
-     unsigned char red,green,blue;
-} PPMPixel;
-
-typedef struct {
-     int x, y;
-     PPMPixel *data;
-} PPMImage;
+static int exit_signal = 0;
+static shared_struct* background;
 
 
 
@@ -73,12 +63,11 @@ void get_background_as_median(int len, char image_sequences[][256], char* output
  */
 struct arg_struct {
     char* vehicle_color;
-    char* default_background;
-    char* background;
     int update;
     int background_update;
     int history;
 };
+
 
 void update_camera_loc(void* aux) {
     // Read arguments
@@ -86,7 +75,6 @@ void update_camera_loc(void* aux) {
     int history = args->history;
     int update = args->update;
     int background_update = args->background_update;
-    char* background = args-> default_background;
 
     // Init parameters
     int shmid;
@@ -95,6 +83,8 @@ void update_camera_loc(void* aux) {
     key = 192012003; // 1920x1200x3
     const int width = 1696;
     const int height = 720;
+    char filename[256];
+    shared_struct* temp = (shared_struct*) malloc(sizeof(shared_struct));
     
     /* Find shared memory segment.  */
     if ((shmid = shmget(key, sizeof(shared_struct), 0666)) < 0) { perror("shmget"); exit(1); }
@@ -106,17 +96,16 @@ void update_camera_loc(void* aux) {
     int index = 0;
 
     while (!exit_signal) {
+	//Store images for background update
 	if (index && (index % background_update == 0)) {
 	    fprintf(stderr, "Update Background\n");
-	    background = args -> background;
-	    get_background_as_median(history, arr, background);
+	    //get_background_as_median(history, arr, background);
 	}
-	   fprintf(stderr, "Grab Image\n");
-	GrabImageFromSharedMemory(arr[index % history], shmid, key, shm, width, height);
-	char cmd[500];
-	sprintf(cmd, "python Python/get_locations.py %s %s", arr[index % history], background);
-	system(cmd);
-	//fprintf(stderr, "%s",  a[index]);
+	//Compute differential image
+	sub(shm, background, temp);
+	export_ppm(filename, width, height, temp);
+	export_ppm(filename, width, height, shm);
+	   
 	index += 1;
 	sleep(update);
     }
@@ -164,16 +153,28 @@ void print_loc(AnkiHandle h){
  * Main routine
  **/
 int main(int argc, char *argv[]) {
-    // Update picture every second and process it  
+    /*
+     * Load thread to Update picture every second and process it  
+     */
+    //Set arguments
     struct arg_struct args;
     args.vehicle_color = "grey";
-    args.default_background =  "/home/cvml1/Code/Images/default_background.ppm";
-    args.background = "/home/cvml1/Code/Images/background.ppm";
     args.update = 1;
     args.background_update = 60;
     args.history = 10;
 
+    // Load default background
+    background = (shared_struct*) malloc(sizeof(shared_struct));
+    background->count = 0;
+    FILE *f = fopen("/home/cvml1/Code/Images/default_background.txt", "rb");
+    long fsize = IMAGE_SIZE;
+    fread(background->data, fsize, 1, f);
+    fclose(f);
+
+    // Launch thread
     pthread_t camera;
+    char filename[256];
+    export_ppm(filename, 1696, 720, background);
     int ret = pthread_create (&camera, 0, (void*)update_camera_loc,  &args);
     sleep(1);
 
@@ -212,5 +213,6 @@ int main(int argc, char *argv[]) {
     anki_s_close(h);*/
     exit_signal = 1;
     pthread_join(camera, NULL);
+    //free(background);
     return 0;
 }
