@@ -56,6 +56,7 @@ if (BUILD_PROJECT)
                     ${READLINE_LIBRARY}
 		    flycapture
 		    pthread
+		    opencv
 		    )
     install(TARGETS main 
 	RUNTIME DESTINATION bin

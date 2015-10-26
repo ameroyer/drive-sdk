@@ -168,6 +168,7 @@ char* get_car_mac(char* color) {
     }
 } 
 
+
 /**
  *  Print car's current location
  */
@@ -179,15 +180,28 @@ void print_loc(AnkiHandle h){
 }
 
 
-
 /**
  * Main routine
  **/
 int main(int argc, char *argv[]) {
     /*
+     * Read parameters and Initialization
+     */
+    if(argc<2){
+	fprintf(stderr, "usage: %s car-name [adaptater] [verbose]\n",argv[0]);
+	exit(0);
+    }
+    const char* adapter = "hci0";
+    const char* car_id  = get_car_mac(argv[1]);
+    if (argc > 2) {
+	adapter = argv[2];
+    }
+    init_blob_detector();
+
+    /*
      * Load thread to Update picture every second and process it  
      */
-    //Set arguments
+    // Set arguments
     struct arg_struct args;
     args.vehicle_color = "grey";
     args.update = 100; //time in milliseconds
@@ -206,16 +220,9 @@ int main(int argc, char *argv[]) {
     pthread_t camera;
     int ret = pthread_create (&camera, 0, (void*)update_camera_loc,  &args);
     
-    // Read parameters
-    if(argc<2){
-    fprintf(stderr, "usage: %s car-name [adaptater] [verbose]\n",argv[0]);
-    exit(0);
-    }
-    const char* adapter = "hci0";
-    const char* car_id  = get_car_mac(argv[1]);
-    if (argc > 2) {
-    adapter = argv[2];
-    }
+    /*
+     * Init vehicle's connection
+     */
     // Init bluethooth and wait for connection successful
     fprintf(stderr, "Attempting connection to %s\n", car_id);
     AnkiHandle h = anki_s_init(adapter, car_id, argc>3);
@@ -228,13 +235,13 @@ int main(int argc, char *argv[]) {
     
     /*
       int i;
-    //for(i=0; i<10; i++){ usleep(200000); anki_s_change_lane(h,-40,100,1000); }  
-    for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
-    anki_s_set_speed(h,500,20000);
-    for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
-    anki_s_change_lane(h,-50,100,1000);
-    for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
-    anki_s_set_speed(h,0,20000); */
+      //for(i=0; i<10; i++){ usleep(200000); anki_s_change_lane(h,-40,100,1000); }  
+      for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
+      anki_s_set_speed(h,500,20000);
+      for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
+      anki_s_change_lane(h,-50,100,1000);
+      for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
+      anki_s_set_speed(h,0,20000); */
     
     // Test
     sleep(30);

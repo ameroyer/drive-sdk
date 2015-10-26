@@ -29,8 +29,10 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <string.h>
-
 #include <signal.h> // to catch CTRL-C
+#include "/usr/local/include/opencv2/opencv.hpp"
+using namespace cv;
+
 
 static volatile int keepRunning = 1;
 
@@ -38,6 +40,8 @@ void intHandler(int dummy) {
     keepRunning = 0;
 }
 
+const int W = 1920;
+const int H = 1200;
 #define IMAGE_SIZE 1920*1200*3
 typedef struct {
     unsigned char data[IMAGE_SIZE];
@@ -61,8 +65,29 @@ void compute_median(int nfiles, char** array, shared_struct* result) {
 }
 
 
+/**
+ * Get location from image using OpenCV Blob detector
+ */
+cv::Ptr<cv::SimpleBlobDetector> detector
+std::vector<KeyPoint> keypoints;
 
+void init_blob_detector() {
+    SimpleBlobDetector::Params params;
+    params.thresholdStep = 0.5;
+    params.minThreshold = 0;
+    params.maxThreshold = 1;
+    params.filterByColor = 1;
+    detector = cv::SimpleBlobDetector::create(params);
+}
+    
+
+    //TODO Several blobs, split by color
 void get_camera_loc(shared_struct* shm, const int width, const int height){
+    Mat im(Size(W, H), CV_8UC3, shm->data);
+    detector->detect(im, keypoints);
+    fprintf(stderr, "Camera loc: (%.2f, %.2f) \n",  keypoints[0].pt.x, keypoints[0].pt.y);
+    
+    /*
     int x, y, i;
     int min_x = 1920;
     int max_x = 0;
@@ -83,6 +108,7 @@ void get_camera_loc(shared_struct* shm, const int width, const int height){
 	}
     }
     fprintf(stderr, "Camera loc: (%d, %d) x (%d, %d)\n", min_x, min_y, max_x, max_y);
+    */
 }
 
 /**
