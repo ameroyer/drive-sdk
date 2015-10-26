@@ -85,8 +85,8 @@ void update_camera_loc(void* aux) {
     if ((shm = (shared_struct*)shmat(shmid, NULL, 0)) == (shared_struct *) -1) { perror("shmat"); exit(1); }
 
     //Init arrays for saving past images
-    char** saved_imgs;
-    saved_imgs = (char**) malloc(sizeof(unsigned char*) * bg_history);
+    unsigned char** saved_imgs;
+    saved_imgs = (unsigned char**) malloc(sizeof(unsigned char*) * bg_history);
     int i;
     for (i = 0; i < bg_history; i++) {
 	saved_imgs[i] = malloc(sizeof(unsigned char) * IMAGE_SIZE);
@@ -107,7 +107,7 @@ void update_camera_loc(void* aux) {
 	    fprintf(stderr, "Update Background\n");
 	    next_bg_update += bg_update - bg_history;
 	    compute_median(bg_history, saved_imgs, background);
-	    export_ppm(filename, width, height, background);
+	    //export_ppm(filename, width, height, background);
 	}
 	// Compute differential image in temp
 	temp->count = index + 1;
@@ -115,7 +115,7 @@ void update_camera_loc(void* aux) {
 
 	// Test
 	export_ppm(filename, width, height, temp);
-	get_camera_loc(background);
+	get_camera_loc(temp);
 
 	// If needed, save current image for background update
 	if (index == next_bg_update) {

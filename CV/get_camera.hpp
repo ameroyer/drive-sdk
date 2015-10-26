@@ -30,7 +30,7 @@ void init_blob_detector();
 /**
  * Return locations of object detected on the camera image
  */
-void get_camera_loc(shared_struct* shm, const int width, const int height);
+void get_camera_loc(shared_struct* shm);
 
 /**
  * Substract two camera images

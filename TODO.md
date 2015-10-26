@@ -12,7 +12,7 @@ TODO LIST - CVML Project
 0. Main
 -------
 Build script: ./build.sh
-Run: ./build/dist/bin/main [name] [adaptater] [verbose]
+Run: ./build/dist/bin/main [name] [adapter] [verbose]
 where:
  - [name] is the color (eg grey) or name of the vehicle (eg boson)
  - [adapter] is the bluetooth adapter (optionaal, defaults to hci0)
