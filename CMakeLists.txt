@@ -45,7 +45,7 @@ if (BUILD_PROJECT)
     set(Project_SOURCES
 		examples/simple-c-interface/anki-simplified.h
 		examples/simple-c-interface/anki-simplified.c
-		FlyExamples/FlyClient/FlyClient.c
+		CV/get_camera.c
 		)
     add_executable(main main.c ${Project_SOURCES})
     target_link_libraries(main
