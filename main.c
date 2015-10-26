@@ -65,6 +65,7 @@ struct arg_struct {
     char* vehicle_color;
     int update;
     int background_update;
+    int background_start;
     int history;
 };
 
@@ -72,49 +73,57 @@ struct arg_struct {
 void update_camera_loc(void* aux) {
     // Read arguments
     struct arg_struct *args = (struct arg_struct *)aux;
-    int history = args->history;
-    int update = args->update;
-    int background_update = args->background_update;
+    int img_update = args->update;
+    int bg_history = args->history;
+    int bg_start = args->background_start;
+    int bg_update = args->background_update;
 
-    // Init parameters
+    // Shared memory
     int shmid;
     key_t key;
     shared_struct *shm;
     key = 192012003; // 1920x1200x3
     const int width = 1696;
     const int height = 720;
-    char filename[256];
-    shared_struct* temp = (shared_struct*) malloc(sizeof(shared_struct));
-    
-    /* Find shared memory segment.  */
+
     if ((shmid = shmget(key, sizeof(shared_struct), 0666)) < 0) { perror("shmget"); exit(1); }
-    /* Attach shared memory segment to our data space.  */
     if ((shm = (shared_struct*)shmat(shmid, NULL, 0)) == (shared_struct *) -1) { perror("shmat"); exit(1); }
 
-    // Grab picture every "update"  seconds and update location
-    char arr[history][256];
+    // Paramaters
+    char saved_img[bg_history][256];
     int index = 0;
+    char filename[256];
+    int next_bg_update = bg_start - bg_history;
+    shared_struct* temp = (shared_struct*) malloc(sizeof(shared_struct));
 
+    // Update location until receiving exit signal
     while (!exit_signal) {
+	fprintf(stderr, "Index: %d - Next bg update: %d - Current saving index: %d\n", index, next_bg_update, (next_bg_update + bg_history - bg_start) % bg_update);
 	//Store images for background update
-	if (index && (index % background_update == 0)) {
+	if ((next_bg_update - bg_start) % bg_update  == 0) {
 	    fprintf(stderr, "Update Background\n");
-	    //get_background_as_median(history, arr, background);
+	    next_bg_update += bg_update - bg_history;
+	    compute_median(bg_history, saved_img, background);
+	    export_ppm(filename, width, height, background);
 	}
-	//Compute differential image
+	// Compute differential image in temp
+	temp->count = index;
 	sub(shm, background, temp);
 	export_ppm(filename, width, height, temp);
-	export_ppm(filename, width, height, shm);
+
+	// If needed, save current image for background update
+	if (index == next_bg_update) {
+	    export_txt(&saved_img[(next_bg_update + bg_history - bg_start) % bg_update], width, height, shm);
+	    next_bg_update += 1;
+	}
 	   
 	index += 1;
-	sleep(update);
+	sleep(img_update);
     }
     
     
     /* Detach local  from shared memory */
     if ( shmdt(shm) == -1) { perror("shmdt"); exit(1); } 
-
-
 } 
 
 
@@ -161,22 +170,20 @@ int main(int argc, char *argv[]) {
     args.vehicle_color = "grey";
     args.update = 1;
     args.background_update = 60;
+    args.background_start = 11;
     args.history = 10;
 
     // Load default background
     background = (shared_struct*) malloc(sizeof(shared_struct));
     background->count = 0;
     FILE *f = fopen("/home/cvml1/Code/Images/default_background.txt", "rb");
-    long fsize = IMAGE_SIZE;
-    fread(background->data, fsize, 1, f);
+    fread(background->data, IMAGE_SIZE, 1, f);
     fclose(f);
 
     // Launch thread
     pthread_t camera;
-    char filename[256];
-    export_ppm(filename, 1696, 720, background);
     int ret = pthread_create (&camera, 0, (void*)update_camera_loc,  &args);
-    sleep(1);
+    sleep(20);
 
 
     /*

@@ -46,8 +46,45 @@ typedef struct {
 
 
 
-shared_struct* sub(shared_struct* im1, shared_struct* im2, shared_struct* result){
-    result->count =  01;
+/**
+ * Compute the median image from a sequence of images
+ */
+void compute_median(int nfiles, char sequence[][256], shared_struct* result) {
+    int i, j;    
+    // Alloc
+    char** array;
+    array = (char**) malloc(sizeof(char*) * nfiles);
+
+    // Load
+    for (i = 0; i < nfiles; i++) {
+	array[i] = malloc(sizeof(char) * IMAGE_SIZE);
+	FILE *f = fopen(sequence[i], "rb");
+	fread(array[i], IMAGE_SIZE, 1, f);
+	fclose(f);
+    }
+
+    // Compute median
+    char pix[nfiles];
+    for (j = 0; j < IMAGE_SIZE; j++) {
+	for (i = 0; i < nfiles; i++) {
+	    pix[i] = array[i][j];
+	}
+	result->data[j] = quick_select(pix, nfiles);
+    }
+
+    // Free
+    for (i = 0; i < nfiles; i++) {
+	free(array[i]);
+    }
+    free(array);
+}
+
+
+
+/**
+ * Substract two camera images
+ */
+void sub(shared_struct* im1, shared_struct* im2, shared_struct* result){
     int i;
     for (i = 0; i < IMAGE_SIZE; i++) {
 	if (im1->data[i] > im2->data[i]) {
@@ -56,7 +93,6 @@ shared_struct* sub(shared_struct* im1, shared_struct* im2, shared_struct* result
 	    result->data[i] = im2->data[i] - im1->data[i];
 	}
     }
-    return result;
 }
 
 /**
@@ -69,6 +105,16 @@ void export_ppm(char* filename, const int width, const int height, shared_struct
     FILE *fid = fopen(filename, "wb"); 
     int res = fwrite(PPMheader, strlen(PPMheader), 1, fid);
     res = fwrite( shm, 1920*1200*3, 1, fid); 
+    fclose(fid);   
+}
+
+/**
+ * Export image without PPm header as a txt file
+ */
+void export_txt(char* filename, const int width, const int height, shared_struct* shm) {
+    snprintf(filename, 255, "/home/cvml1/Code/Images/fc2TestImage%08ld.txt", shm->count);
+    FILE *fid = fopen(filename, "wb"); 
+    int res = fwrite( shm, 1920*1200*3, 1, fid); 
     fclose(fid);   
 }
 
