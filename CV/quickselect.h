@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 // Fast median evaluation
-char quick_select(char arr[], int n);
+unsigned char quick_select(unsigned char arr[], int n);
 
 
 #ifdef __cplusplus

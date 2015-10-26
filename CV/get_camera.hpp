@@ -19,7 +19,7 @@ typedef struct {
 /**
  * Compute the median image from a sequence of images
  */
-void compute_median(int nfiles, char** array, shared_struct* result);
+void compute_median(int nfiles, unsigned char** array, shared_struct* result);
 
 
 /**

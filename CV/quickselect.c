@@ -10,7 +10,7 @@
 
 #define ELEM_SWAP(a,b) { register char t=(a);(a)=(b);(b)=t; }
 
-char quick_select(char arr[], int n) 
+unsigned char quick_select(unsigned char arr[], int n) 
 {
     int low, high ;
     int median;
