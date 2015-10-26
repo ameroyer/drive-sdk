@@ -117,7 +117,7 @@ void update_camera_loc(void* aux) {
 	// Compute differential image in temp
 	temp->count = index + 1;
 	//sub(shm, background, temp);
-	sub_thres(shm, background, temp, 100);
+	sub_thres(shm, background, temp, 150);
 	export_ppm(filename, width, height, temp);
 	get_camera_loc(temp, width, height);
 
@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
     struct arg_struct args;
     args.vehicle_color = "grey";
     args.update = 100; //time in milliseconds
-    args.background_update = 100;
+    args.background_update = 1000;
     args.background_start = 21;
     args.history = 15;
 
