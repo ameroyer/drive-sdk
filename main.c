@@ -91,11 +91,11 @@ void update_camera_loc(void* aux) {
 
     //Init arrays for saving past images
     char** saved_imgs;
-    saved_imgs = (char**) malloc(sizeof(char*) * nfiles);
-    for (i = 0; i < history; i++) {
+    saved_imgs = (char**) malloc(sizeof(char*) * bg_history);
+    int i;
+    for (i = 0; i < bg_history; i++) {
 	saved_imgs[i] = malloc(sizeof(char) * IMAGE_SIZE);
     }
-
 
     // Paramaters
     char saved_img[bg_history][256];
@@ -106,7 +106,7 @@ void update_camera_loc(void* aux) {
 
     // Update location until receiving exit signal
     while (!exit_signal) {
-	fprintf(stderr, "Index: %d - Next bg update: %d - Current saving index: %d\n", index, next_bg_update, (next_bg_update + bg_history - bg_start) % bg_update);
+	fprintf(stderr, "Index: %d - Next bg update: %d - Current saving index: %d\n", index, next_bg_update / bg_update + bg_start, (next_bg_update + bg_history - bg_start) % bg_update);
 	//Store images for background update
 	if ((next_bg_update - bg_start) % bg_update  == 0) {
 	    fprintf(stderr, "Update Background\n");
@@ -121,7 +121,7 @@ void update_camera_loc(void* aux) {
 
 	// If needed, save current image for background update
 	if (index == next_bg_update) {
-	    memcpy(saved_ims[(next_bg_update + bg_history - bg_start) % bg_update], shm->data, IMAGE_SIZE);
+	    memcpy(saved_imgs[(next_bg_update + bg_history - bg_start) % bg_update], shm->data, IMAGE_SIZE);
 	    //export_txt(&saved_img[(next_bg_update + bg_history - bg_start) % bg_update], width, height, shm);
 	    next_bg_update += 1;
 	}
@@ -134,7 +134,7 @@ void update_camera_loc(void* aux) {
     /* Detach local  from shared memory */
     if ( shmdt(shm) == -1) { perror("shmdt"); exit(1); } 
     // Free
-    for (i = 0; i < history;; i++) {
+    for (i = 0; i < bg_history; i++) {
 	free(saved_imgs[i]);
     }
     free(saved_imgs);
