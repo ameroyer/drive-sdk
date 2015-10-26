@@ -42,8 +42,8 @@ void intHandler(int dummy) {
     keepRunning = 0;
 }
 
-const int W = 1920;
-const int H = 1200;
+static int ppm_width = 1696;
+static int ppm_height = 720;
 
 /**
  * Compute the median image from a sequence of images
@@ -71,49 +71,23 @@ void init_blob_detector() {
     params.thresholdStep = 0.5;
     params.minThreshold = 0;
     params.maxThreshold = 1;
-    params.filterByColor = 1;
+    params.filterByColor = 0;
+    params.filterByArea = 1;
+    params.minArea = 10;
+    params.maxArea = 300;
     detector = cv::SimpleBlobDetector::create(params);
 }
     
 
-    //TODO Several blobs, split by color
-void get_camera_loc(shared_struct* shm, const int width, const int height){
-    //TODO
-    /*
-    Mat im = Mat(H, W, CV_8UC3, shm->data);
-    imwrite("test.jpg", im);
+void get_camera_loc(shared_struct* shm) {
+    //TO TEST
+    //TODO check block average color
+    //TODO if keypoints empty use anki location
+    Mat im = Mat(ppm_height, ppm_width, CV_8UC3, shm->data);
     detector->detect(im, keypoints);
-    
-    Mat im_with_keypoints;
-    drawKeypoints( im, keypoints, im_with_keypoints, Scalar(0,0,255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
-    imwrite("test2.jpg", im_with_keypoints);    
-//imshow("keypoints", im);
-//waitKey(0); 
-//fprintf(stderr, "Camera loc: (%.2f, %.2f) \n",  keypoints[0].pt.x, keypoints[0].pt.y);
-*/
-    
-    int x, y, i;
-    int min_x = 1920;
-    int max_x = 0;
-    int min_y = 1200;
-    int max_y = 0;
-    for (i = 0; i < IMAGE_SIZE / 3; i++) {
-	if (shm->data[i] != 0) {
-	    x = i / width;
-	    y = i % width;
-	    if (x < min_x) {
-		min_x = x;}
-	    else if (x > max_x) {
-		max_x = x;}
-	    if (y < min_y) {
-		min_y = y;}
-	    else if (y > max_y) {
-		max_y = y;}
-	}
-    }
-    fprintf(stderr, "Camera loc: (%d, %d) x (%d, %d)\n", min_x, min_y, max_x, max_y);
-    
+    fprintf(stderr, "Camera loc: (%.2f, %.2f) \n",  keypoints[0].pt.x, keypoints[0].pt.y);
 }
+
 
 /**
  * Substract two camera images
