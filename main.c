@@ -106,7 +106,7 @@ void update_camera_loc(void* aux) {
 
     // Update location until receiving exit signal
     while (!exit_signal) {
-	fprintf(stderr, "Index: %d - Next bg update: %d - Current saving index: %d\n", index, next_bg_update / bg_update + bg_start, (next_bg_update + bg_history - bg_start) % bg_update);
+	fprintf(stderr, "Index: %d - Next bg update: %d - Current saving index: %d\n", index, next_bg_update  - next_bg_update%bg_update + bg_start, (next_bg_update + bg_history - bg_start) % bg_update);
 	//Store images for background update
 	if ((next_bg_update - bg_start) % bg_update  == 0) {
 	    fprintf(stderr, "Update Background\n");
@@ -115,9 +115,11 @@ void update_camera_loc(void* aux) {
 	    export_ppm(filename, width, height, background);
 	}
 	// Compute differential image in temp
-	temp->count = index;
-	sub(shm, background, temp);
+	temp->count = index + 1;
+	//sub(shm, background, temp);
+	sub_thres(shm, background, temp, 100);
 	export_ppm(filename, width, height, temp);
+	get_camera_loc(temp, width, height);
 
 	// If needed, save current image for background update
 	if (index == next_bg_update) {
@@ -127,7 +129,7 @@ void update_camera_loc(void* aux) {
 	}
 	   
 	index += 1;
-	sleep(img_update);
+	usleep(img_update * 1000);
     }
     
     
@@ -146,14 +148,20 @@ void update_camera_loc(void* aux) {
  * Return car's MAC address given color or name
  */
 char* get_car_mac(char* color) {
-    if (strcmp(color, "grey") || strcmp(color, "boson") || strcmp(color, "gray")) {
+    if (!strcmp(color, "grey") || !strcmp(color, "boson") || !strcmp(color, "gray")) {
         return "D9:81:41:5C:D4:31"; 
     }
-    else if (strcmp(color, "blue") || strcmp(color, "katal")) {
+    else if (!strcmp(color, "blue") || !strcmp(color, "katal")) {
         return "D8:64:85:29:01:C0";
     }
-    else if (strcmp(color, "koural") || strcmp(color, "yellow")) {
+    else if (!strcmp(color, "koural") || !strcmp(color, "yellow")) {
         return "EB:0D:D8:05:CA:1A";
+    }
+    else if (!strcmp(color, "nuke") || !strcmp(color, "green")) {
+        return "C5:34:5D:26:BE:53";
+    }
+    else if (!strcmp(color, "hadion") || !strcmp(color, "orange")) {
+        return "D4:48:49:03:98:95";
     }
     else {
         return "E6:D8:52:F1:D9:43";
@@ -182,10 +190,10 @@ int main(int argc, char *argv[]) {
     //Set arguments
     struct arg_struct args;
     args.vehicle_color = "grey";
-    args.update = 1;
-    args.background_update = 60;
-    args.background_start = 11;
-    args.history = 10;
+    args.update = 100; //time in milliseconds
+    args.background_update = 100;
+    args.background_start = 21;
+    args.history = 15;
 
     // Load default background
     background = (shared_struct*) malloc(sizeof(shared_struct));
@@ -197,10 +205,7 @@ int main(int argc, char *argv[]) {
     // Launch thread
     pthread_t camera;
     int ret = pthread_create (&camera, 0, (void*)update_camera_loc,  &args);
-    sleep(20);
-
-
-    /*
+    
     // Read parameters
     if(argc<2){
     fprintf(stderr, "usage: %s car-name [adaptater] [verbose]\n",argv[0]);
@@ -212,28 +217,33 @@ int main(int argc, char *argv[]) {
     adapter = argv[2];
     }
     // Init bluethooth and wait for connection successful
-    fprintf(stderr, "Attempting connection\n");
+    fprintf(stderr, "Attempting connection to %s\n", car_id);
     AnkiHandle h = anki_s_init(adapter, car_id, argc>3);
     while(!anki_s_is_connected(h)) {};
     fprintf(stderr, "Connection successful\n");
 
     // Send commands
-    int i;
-    if(anki_s_set_speed(h,1000,20000)!=0) return 1;
+    anki_s_set_speed(h,600,20000);
     print_loc(h);
+    
+    /*
+      int i;
     //for(i=0; i<10; i++){ usleep(200000); anki_s_change_lane(h,-40,100,1000); }  
     for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
     anki_s_set_speed(h,500,20000);
     for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
     anki_s_change_lane(h,-50,100,1000);
     for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
-    anki_s_set_speed(h,0,20000);
-    sleep(1);
+    anki_s_set_speed(h,0,20000); */
+    
+    // Test
+    sleep(30);
 
+    //TODO bloc fina; + interrupt if disconnected
     // Disconnect
-    anki_s_close(h);*/
+    anki_s_close(h);
     exit_signal = 1;
     pthread_join(camera, NULL);
-    //free(background);
+    free(background);
     return 0;
 }
