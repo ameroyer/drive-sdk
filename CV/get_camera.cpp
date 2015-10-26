@@ -48,9 +48,9 @@ const int H = 1200;
 /**
  * Compute the median image from a sequence of images
  */
-void compute_median(int nfiles, char** array, shared_struct* result) {
+void compute_median(int nfiles, unsigned char** array, shared_struct* result) {
     int i, j;    
-    char pix[nfiles];
+    unsigned char pix[nfiles];
     for (j = 0; j < IMAGE_SIZE; j++) {
 	for (i = 0; i < nfiles; i++) {
 	    pix[i] = array[i][j];
@@ -78,11 +78,20 @@ void init_blob_detector() {
 
     //TODO Several blobs, split by color
 void get_camera_loc(shared_struct* shm, const int width, const int height){
-    Mat im(Size(W, H), CV_8UC3, shm->data);
-    detector->detect(im, keypoints);
-    fprintf(stderr, "Camera loc: (%.2f, %.2f) \n",  keypoints[0].pt.x, keypoints[0].pt.y);
-    
+    //TODO
     /*
+    Mat im = Mat(H, W, CV_8UC3, shm->data);
+    imwrite("test.jpg", im);
+    detector->detect(im, keypoints);
+    
+    Mat im_with_keypoints;
+    drawKeypoints( im, keypoints, im_with_keypoints, Scalar(0,0,255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
+    imwrite("test2.jpg", im_with_keypoints);    
+//imshow("keypoints", im);
+//waitKey(0); 
+//fprintf(stderr, "Camera loc: (%.2f, %.2f) \n",  keypoints[0].pt.x, keypoints[0].pt.y);
+*/
+    
     int x, y, i;
     int min_x = 1920;
     int max_x = 0;
@@ -103,7 +112,7 @@ void get_camera_loc(shared_struct* shm, const int width, const int height){
 	}
     }
     fprintf(stderr, "Camera loc: (%d, %d) x (%d, %d)\n", min_x, min_y, max_x, max_y);
-    */
+    
 }
 
 /**
@@ -167,17 +176,3 @@ void export_txt(char* filename, const int width, const int height, shared_struct
     fclose(fid);   
 }
 
-
-/*
-  int main(int argc, char** argv)
-  {        
-  const int k_numImages = 10;
-
-  GrabImagesFromSharedMemory( k_numImages );   
-
-  printf( "Done! \n" );
-  //   getchar();
-
-  return 0;
-  }
-*/

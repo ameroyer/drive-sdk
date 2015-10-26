@@ -19,14 +19,6 @@
 /**
  * Structures types
  */
-/*
-// Camera images
-#define IMAGE_SIZE 1920*1200*3
-typedef struct {
-    unsigned char data[IMAGE_SIZE];
-    long count;
-    } shared_struct;*/
-
 // Position from camera
 typedef struct camera_localization {
     int x    ;    /// x coordinate
@@ -48,6 +40,7 @@ static shared_struct* background;
  * Get background image as median image
  *
  */
+//TODO: Multithreaded for faster execution
 void get_background_as_median(int len, char image_sequences[][256], char* output){
     char cmd[1000];
     sprintf(cmd, "python Python/compute_median.py %s", output);
@@ -93,14 +86,14 @@ void update_camera_loc(void* aux) {
 
     //Init arrays for saving past images
     char** saved_imgs;
-    saved_imgs = (char**) malloc(sizeof(char*) * bg_history);
+    saved_imgs = (char**) malloc(sizeof(unsigned char*) * bg_history);
     int i;
     for (i = 0; i < bg_history; i++) {
-	saved_imgs[i] = malloc(sizeof(char) * IMAGE_SIZE);
+	saved_imgs[i] = malloc(sizeof(unsigned char) * IMAGE_SIZE);
     }
 
     // Paramaters
-    char saved_img[bg_history][256];
+    unsigned char saved_img[bg_history][256];
     int index = 0;
     char filename[256];
     int next_bg_update = bg_start - bg_history;
@@ -118,10 +111,11 @@ void update_camera_loc(void* aux) {
 	}
 	// Compute differential image in temp
 	temp->count = index + 1;
-	//sub(shm, background, temp);
 	sub_thres(shm, background, temp, 150);
+
+	// Test
 	export_ppm(filename, width, height, temp);
-	get_camera_loc(temp, width, height);
+	get_camera_loc(background, width, height);
 
 	// If needed, save current image for background update
 	if (index == next_bg_update) {
