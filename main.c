@@ -115,7 +115,7 @@ void update_camera_loc(void* aux) {
 
 	// Test
 	export_ppm(filename, width, height, temp);
-	get_camera_loc(background, width, height);
+	get_camera_loc(background);
 
 	// If needed, save current image for background update
 	if (index == next_bg_update) {
