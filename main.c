@@ -5,6 +5,7 @@
 
 
 #include "examples/simple-c-interface/anki-simplified.h"
+#include "CV/get_camera.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -18,12 +19,13 @@
 /**
  * Structures types
  */
+/*
 // Camera images
 #define IMAGE_SIZE 1920*1200*3
 typedef struct {
     unsigned char data[IMAGE_SIZE];
     long count;
-} shared_struct;
+    } shared_struct;*/
 
 // Position from camera
 typedef struct camera_localization {
