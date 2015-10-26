@@ -49,19 +49,9 @@ typedef struct {
 /**
  * Compute the median image from a sequence of images
  */
-void compute_median(int nfiles, char sequence[][256], shared_struct* result) {
+void compute_median(int nfiles, char array[][IMAGE_SIZE], shared_struct* result) {
     int i, j;    
     // Alloc
-    char** array;
-    array = (char**) malloc(sizeof(char*) * nfiles);
-
-    // Load
-    for (i = 0; i < nfiles; i++) {
-	array[i] = malloc(sizeof(char) * IMAGE_SIZE);
-	FILE *f = fopen(sequence[i], "rb");
-	fread(array[i], IMAGE_SIZE, 1, f);
-	fclose(f);
-    }
 
     // Compute median
     char pix[nfiles];
@@ -72,14 +62,13 @@ void compute_median(int nfiles, char sequence[][256], shared_struct* result) {
 	result->data[j] = quick_select(pix, nfiles);
     }
 
-    // Free
-    for (i = 0; i < nfiles; i++) {
-	free(array[i]);
-    }
-    free(array);
 }
 
 
+
+void get_camera_loc(shared_struc* shm){
+    fprintf(stderr, "Camera loc");
+}
 
 /**
  * Substract two camera images
