@@ -46,6 +46,7 @@ if (BUILD_PROJECT)
 		examples/simple-c-interface/anki-simplified.h
 		examples/simple-c-interface/anki-simplified.c
 		CV/get_camera.c
+		CV/quickselect.c
 		)
     add_executable(main main.c ${Project_SOURCES})
     target_link_libraries(main
