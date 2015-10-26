@@ -31,6 +31,8 @@
 #include <string.h>
 #include <signal.h> // to catch CTRL-C
 #include "/usr/local/include/opencv2/opencv.hpp"
+#include "quickselect.h"
+#include "get_camera.hpp"
 using namespace cv;
 
 
@@ -42,13 +44,6 @@ void intHandler(int dummy) {
 
 const int W = 1920;
 const int H = 1200;
-#define IMAGE_SIZE 1920*1200*3
-typedef struct {
-    unsigned char data[IMAGE_SIZE];
-    long count;
-} shared_struct;
-
-
 
 /**
  * Compute the median image from a sequence of images
@@ -68,7 +63,7 @@ void compute_median(int nfiles, char** array, shared_struct* result) {
 /**
  * Get location from image using OpenCV Blob detector
  */
-cv::Ptr<cv::SimpleBlobDetector> detector
+cv::Ptr<cv::SimpleBlobDetector> detector;
 std::vector<KeyPoint> keypoints;
 
 void init_blob_detector() {
