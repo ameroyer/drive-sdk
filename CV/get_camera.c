@@ -63,15 +63,15 @@ void compute_median(int nfiles, char** array, shared_struct* result) {
 
 
 void get_camera_loc(shared_struct* shm, const int width, const int height){
-    int i;
+    int x, y, i;
     int min_x = 1920;
     int max_x = 0;
     int min_y = 1200;
     int max_y = 0;
     for (i = 0; i < IMAGE_SIZE / 3; i++) {
 	if (shm->data[i] != 0) {
-	    int x = i / width;
-	    int y = i % width;
+	    x = i / width;
+	    y = i % width;
 	    if (x < min_x) {
 		min_x = x;}
 	    else if (x > max_x) {
@@ -82,7 +82,7 @@ void get_camera_loc(shared_struct* shm, const int width, const int height){
 		max_y = y;}
 	}
     }
-    fprintf(stderr, "Camera loc: %d x %d x %d x %d\n", min_x, max_x, min_y, max_y);
+    fprintf(stderr, "Camera loc: (%d, %d) x (%d, %d)\n", min_x, min_y, max_x, max_y);
 }
 
 /**
@@ -103,6 +103,7 @@ void sub(shared_struct* im1, shared_struct* im2, shared_struct* result){
 /**
  * Substract two camera images with thresolding function
  */
+//TODO instead of 255 opn three channel, put 1 channel and chhose color accordingly
 void sub_thres(shared_struct* im1, shared_struct* im2, shared_struct* result, int threshold){
     int i;
     for (i = 0; i < IMAGE_SIZE; i++) {
