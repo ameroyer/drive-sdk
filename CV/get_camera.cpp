@@ -68,13 +68,15 @@ std::vector<KeyPoint> keypoints;
 
 void init_blob_detector() {
     SimpleBlobDetector::Params params;
-    params.thresholdStep = 0.5;
-    params.minThreshold = 0;
-    params.maxThreshold = 1;
+    params.thresholdStep = 1;
+    params.minThreshold = 120;
+    params.maxThreshold = 122;
     params.filterByColor = 0;
+    params.filterByConvexity = 0;
+    params.filterByCircularity = 0;
     params.filterByArea = 1;
-    params.minArea = 10;
-    params.maxArea = 300;
+    params.minArea = 250;
+    params.maxArea = 1500;
     detector = cv::SimpleBlobDetector::create(params);
 }
     
@@ -85,7 +87,11 @@ void get_camera_loc(shared_struct* shm) {
     //TODO if keypoints empty use anki location
     Mat im = Mat(ppm_height, ppm_width, CV_8UC3, shm->data);
     detector->detect(im, keypoints);
-    fprintf(stderr, "Camera loc: (%.2f, %.2f) \n",  keypoints[0].pt.x, keypoints[0].pt.y);
+    if (keypoints.size() > 0) {
+	fprintf(stderr, "Camera loc: (%.2f, %.2f) \n",  keypoints[0].pt.x, keypoints[0].pt.y);
+    } else {
+	fprintf(stderr, "Error, no Camera loc found\n");
+    }
 }
 
 
@@ -149,4 +155,3 @@ void export_txt(char* filename, const int width, const int height, shared_struct
     int res = fwrite( shm, 1920*1200*3, 1, fid); 
     fclose(fid);   
 }
-
