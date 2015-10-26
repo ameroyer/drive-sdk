@@ -62,8 +62,27 @@ void compute_median(int nfiles, char** array, shared_struct* result) {
 
 
 
-void get_camera_loc(shared_struct* shm){
-    fprintf(stderr, "Camera loc");
+void get_camera_loc(shared_struct* shm, const int width, const int height){
+    int i;
+    int min_x = 1920;
+    int max_x = 0;
+    int min_y = 1200;
+    int max_y = 0;
+    for (i = 0; i < IMAGE_SIZE / 3; i++) {
+	if (shm->data[i] != 0) {
+	    int x = i / width;
+	    int y = i % width;
+	    if (x < min_x) {
+		min_x = x;}
+	    else if (x > max_x) {
+		max_x = x;}
+	    if (y < min_y) {
+		min_y = y;}
+	    else if (y > max_y) {
+		max_y = y;}
+	}
+    }
+    fprintf(stderr, "Camera loc: %d x %d x %d x %d\n", min_x, max_x, min_y, max_y);
 }
 
 /**
@@ -76,6 +95,29 @@ void sub(shared_struct* im1, shared_struct* im2, shared_struct* result){
 	    result->data[i] = im1->data[i] - im2->data[i];
 	} else {
 	    result->data[i] = im2->data[i] - im1->data[i];
+	}
+    }
+}
+
+
+/**
+ * Substract two camera images with thresolding function
+ */
+void sub_thres(shared_struct* im1, shared_struct* im2, shared_struct* result, int threshold){
+    int i;
+    for (i = 0; i < IMAGE_SIZE; i++) {
+	if (im1->data[i] > im2->data[i]) {
+	    if (im1->data[i] - im2->data[i] < threshold) {
+		result->data[i] = 0;
+	    } else {
+		result->data[i] = 255;
+	    }
+	} else {
+	    if (im2->data[i] - im1->data[i] < threshold) {
+		result->data[i] = 0;
+	    } else {
+		result->data[i] = 255;
+	    }
 	}
     }
 }
