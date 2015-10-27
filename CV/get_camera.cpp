@@ -75,8 +75,8 @@ void init_blob_detector() {
     params.filterByConvexity = 0;
     params.filterByCircularity = 0;
     params.filterByArea = 1;
-    params.minArea = 250;
-    params.maxArea = 1500;
+    params.minArea = 50;
+    params.maxArea = 3000;
     detector = cv::SimpleBlobDetector::create(params);
 }
     
