@@ -27,13 +27,16 @@ where:
 - Detect if the vehicle is out of the road (no localisation information) and try to set random speed to get back in track
 - Detect if vehicle gets disconnected and reconnect
 - Create a policy function that set the vehicle's speed/lane depending on its position
+- Use HSV colorspace instead of RGB
 
 
 2. Adding Computer Vision (CV) and Machine Learning (ML) 
 --------------------------------------------------------
 - (CV) Get default background image				[Done]
+- Improve background computation (Multithread) + faster timerate to extract images for the median
 - (CV) Detect where the turns and straight parts of the track are
 - (CV) Detect vehicles' positions (background substraction) []  [Done]
+- (CV) Finetune parameters of blob detection for different colors (eg bad case = red and grey)
 - (CV) Detect red borders/limits of the track
 - (ML) Implement Reinforcement Learning/Q-Learning for the situation with only one car to get the best policy
 

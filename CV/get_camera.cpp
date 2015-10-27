@@ -68,15 +68,15 @@ std::vector<KeyPoint> keypoints;
 
 void init_blob_detector() {
     SimpleBlobDetector::Params params;
-    params.thresholdStep = 1;
-    params.minThreshold = 120;
-    params.maxThreshold = 122;
+    //params.thresholdStep = 1;
+    //params.minThreshold = 120;
+    //params.maxThreshold = 122;
     params.filterByColor = 0;
     params.filterByConvexity = 0;
     params.filterByCircularity = 0;
     params.filterByArea = 1;
-    params.minArea = 50;
-    params.maxArea = 3000;
+    params.minArea = 450;
+    params.maxArea = 3200;
     detector = cv::SimpleBlobDetector::create(params);
 }
     
@@ -92,6 +92,12 @@ void get_camera_loc(shared_struct* shm) {
     } else {
 	fprintf(stderr, "Error, no Camera loc found\n");
     }
+    Mat im_with_keypoints;
+    drawKeypoints( im, keypoints, im_with_keypoints, Scalar(0,0,255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
+    char filename[256];
+    snprintf(filename, 255, "/home/cvml1/Code/Images/KPfc2TestImage%08ld.ppm", shm->count);
+ imwrite( filename,  im_with_keypoints );
+	
 }
 
 
