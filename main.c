@@ -15,6 +15,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <string.h>
+#include <signal.h>
 
 /**
  * Structures types
@@ -33,7 +34,8 @@ typedef struct camera_localization {
  */
 static int exit_signal = 0;
 static shared_struct* background;
-
+static pthread_t camera;
+static AnkiHandle h;
 
 
 /**
@@ -111,7 +113,8 @@ void update_camera_loc(void* aux) {
 	}
 	// Compute differential image in temp
 	temp->count = index + 1;
-	sub_thres(shm, background, temp, 150);
+	sub_thres(shm, background, temp, 80);
+	//sub(shm, background, temp);
 
 	// Test
 	export_ppm(filename, width, height, temp);
@@ -175,11 +178,21 @@ void print_loc(AnkiHandle h){
 	   loc.segm, loc.subsegm, loc.is_clockwise, loc.update_time);
 }
 
+/**
+ * Handle keyboard interrupts
+ */
+static int kbint = 1;
+void intHandler(int sig) {    
+    fprintf(stderr, "Keyboard interrupt - execute final block\n");
+    kbint = 0;  
+}
+
 
 /**
  * Main routine
  **/
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {    
+     signal(SIGINT, intHandler);
     /*
      * Read parameters and Initialization
      */
@@ -213,7 +226,6 @@ int main(int argc, char *argv[]) {
     fclose(f);
 
     // Launch thread
-    pthread_t camera;
     int ret = pthread_create (&camera, 0, (void*)update_camera_loc,  &args);
     
     /*
@@ -221,13 +233,14 @@ int main(int argc, char *argv[]) {
      */
     // Init bluethooth and wait for connection successful
     fprintf(stderr, "Attempting connection to %s\n", car_id);
-    AnkiHandle h = anki_s_init(adapter, car_id, argc>3);
-    while(!anki_s_is_connected(h)) {};
+    h = anki_s_init(adapter, car_id, argc>3);
+    while(!anki_s_is_connected(h) || !anki_s_is_sdk_ctrl_mode(h));
     fprintf(stderr, "Connection successful\n");
+    int res;
 
     // Send commands
-    anki_s_set_speed(h,600,20000);
-    print_loc(h);
+    res = anki_s_set_speed(h,600,20000);
+    //print_loc(h);
     
     /*
       int i;
@@ -240,7 +253,11 @@ int main(int argc, char *argv[]) {
       anki_s_set_speed(h,0,20000); */
     
     // Test
-    sleep(30);
+    while (kbint && !res && h) {
+	sleep(1);
+	print_loc(h);
+
+    }
 
     //TODO bloc fina; + interrupt if disconnected
     // Disconnect
