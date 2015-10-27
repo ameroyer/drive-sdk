@@ -61,6 +61,11 @@ int anki_s_uturn(AnkiHandle handle);
  */
 int anki_s_change_lane(AnkiHandle handle, int relative_offset, int h_speed, int h_accel);
 
+/** cancels last change command
+    @return 0 for okay, 1 for failure
+ */
+int anki_s_cancel_lane_change(AnkiHandle handle);
+
 /** returns 1 if connected and 0 if not*/
 int anki_s_is_connected(AnkiHandle handle);
 int anki_s_is_sdk_ctrl_mode(AnkiHandle ankihandle);
