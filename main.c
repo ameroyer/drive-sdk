@@ -17,56 +17,63 @@
 #include <string.h>
 #include <signal.h>
 
+
 /**
- * Structures types
- */
-// Position from camera
-typedef struct camera_localization {
-    int x    ;    /// x coordinate
-    int y ;    /// y coordinate
-    int update_time ; /// Last update time (is increased every time we get an update from the car)
-} camera_localization_t
-;
-
-
-/** 
  * Global variables
  */
 static int exit_signal = 0;
 static shared_struct* background;
 static pthread_t camera;
 static AnkiHandle h;
+camera_localization_t* camera_loc;
 
 
 /**
- * Get background image as median image
- *
+ * Handle keyboard interrupts
  */
-//TODO: Multithreaded for faster execution
-void get_background_as_median(int len, char image_sequences[][256], char* output){
-    char cmd[1000];
-    sprintf(cmd, "python Python/compute_median.py %s", output);
-    int i;
-    for (i = 0; i < len; i++) {
-	strcat(cmd, " ");
-	strcat(cmd, image_sequences[i]);
-    }
-    system(cmd);
+static int kbint = 1;
+void intHandler(int sig) {    
+    fprintf(stderr, "Keyboard interrupt - execute final block\n");
+    kbint = 0;  
+}
+
+/**
+ *  Print car's current location
+ */
+void print_loc(AnkiHandle h){
+    localization_t loc;
+    loc = anki_s_get_localization(h);
+    printf("Location: segm: %03x subsegm: %03x clock-wise: %i last-update: %i\n",
+	   loc.segm, loc.subsegm, loc.is_clockwise, loc.update_time);
 }
 
 
 /**
+ *  Print car's current location (from camera)
+ */
+void print_camera_loc(){
+    if (camera_loc->success) {
+	printf("Location: x: %.2f y: %.2f size: %.2f last-update: %i\n",
+	       camera_loc->x, camera_loc->y, camera_loc->size, camera_loc->update_time);
+    } else {
+	printf("Error in camera detection at time %i\n", camera_loc->update_time); 
+    }
+}
+
+/**
  * Get vehicle's location through camera (runs on independent thread)
  */
+// Struct type to pass arguments to thread
 struct arg_struct {
-    char* vehicle_color;
-    int update;
-    int background_update;
-    int background_start;
-    int history;
+    char* vehicle_color;   // Our vehicle's color
+    int update;            // Image update (time in millisecond)
+    int background_update; // new background every X image updates
+    int background_start;  // index of first background computation
+    int history;           // nbr of images for bacground computation
+    int verbose;           // 0-1: set verbosity level
 };
 
-
+// Main function run on the thread
 void update_camera_loc(void* aux) {
     // Read arguments
     struct arg_struct *args = (struct arg_struct *)aux;
@@ -74,17 +81,23 @@ void update_camera_loc(void* aux) {
     int bg_history = args->history;
     int bg_start = args->background_start;
     int bg_update = args->background_update;
+    int verbose = args->verbose;
 
-    // Shared memory
+    // Init shared memory
     int shmid;
     key_t key;
     shared_struct *shm;
     key = 192012003; // 1920x1200x3
     const int width = 1696;
     const int height = 720;
-
     if ((shmid = shmget(key, sizeof(shared_struct), 0666)) < 0) { perror("shmget"); exit(1); }
     if ((shm = (shared_struct*)shmat(shmid, NULL, 0)) == (shared_struct *) -1) { perror("shmat"); exit(1); }
+
+    // Additional Paramaters
+    int index = 0;
+    char filename[256];
+    int next_bg_update = bg_start - bg_history;
+    shared_struct* temp = (shared_struct*) malloc(sizeof(shared_struct));
 
     //Init arrays for saving past images
     unsigned char** saved_imgs;
@@ -94,47 +107,46 @@ void update_camera_loc(void* aux) {
 	saved_imgs[i] = malloc(sizeof(unsigned char) * IMAGE_SIZE);
     }
 
-    // Paramaters
-    unsigned char saved_img[bg_history][256];
-    int index = 0;
-    char filename[256];
-    int next_bg_update = bg_start - bg_history;
-    shared_struct* temp = (shared_struct*) malloc(sizeof(shared_struct));
+    /*
+     * Update location until receiving exit signal
+     */
+    while (!exit_signal && !kbint) {
+	// DEBUG
+	if (verbose) {
+	    fprintf(stderr, "Index: %d - Next bg update: %d - Current saving index: %d\n", index, next_bg_update  - next_bg_update%bg_update + bg_start, (next_bg_update + bg_history - bg_start) % bg_update);
+	}
 
-    // Update location until receiving exit signal
-    while (!exit_signal) {
-	fprintf(stderr, "Index: %d - Next bg update: %d - Current saving index: %d\n", index, next_bg_update  - next_bg_update%bg_update + bg_start, (next_bg_update + bg_history - bg_start) % bg_update);
-	//Store images for background update
+	// Update background if needed
 	if ((next_bg_update - bg_start) % bg_update  == 0) {
-	    fprintf(stderr, "Update Background\n");
 	    next_bg_update += bg_update - bg_history;
 	    compute_median(bg_history, saved_imgs, background);
-	    //export_ppm(filename, width, height, background);
+	    if (verbose) {
+		export_ppm(filename, width, height, background);
+	    }
 	}
-	// Compute differential image in temp
+
+	// Compute differential image in temp and update location
 	temp->count = index + 1;
 	sub_thres(shm, background, temp, 80);
-	//sub(shm, background, temp);
+	get_camera_loc(temp, index, verbose);
 
-	// Test
-	export_ppm(filename, width, height, temp);
-	get_camera_loc(temp);
+	// DEBUG
+	if (verbose) {
+	    export_ppm(filename, width, height, temp);
+	}
 
-	// If needed, save current image for background update
+	// If needed, save current image for next background update
 	if (index == next_bg_update) {
 	    memcpy(saved_imgs[(next_bg_update + bg_history - bg_start) % bg_update], shm->data, IMAGE_SIZE);
-	    //export_txt(&saved_img[(next_bg_update + bg_history - bg_start) % bg_update], width, height, shm);
 	    next_bg_update += 1;
-	}
-	   
+	}	   
 	index += 1;
 	usleep(img_update * 1000);
     }
     
     
-    /* Detach local  from shared memory */
+    // Free and close
     if ( shmdt(shm) == -1) { perror("shmdt"); exit(1); } 
-    // Free
     for (i = 0; i < bg_history; i++) {
 	free(saved_imgs[i]);
     }
@@ -169,30 +181,10 @@ char* get_car_mac(char* color) {
 
 
 /**
- *  Print car's current location
- */
-void print_loc(AnkiHandle h){
-    localization_t loc;
-    loc = anki_s_get_localization(h);
-    printf("Location: segm: %03x subsegm: %03x clock-wise: %i last-update: %i\n",
-	   loc.segm, loc.subsegm, loc.is_clockwise, loc.update_time);
-}
-
-/**
- * Handle keyboard interrupts
- */
-static int kbint = 1;
-void intHandler(int sig) {    
-    fprintf(stderr, "Keyboard interrupt - execute final block\n");
-    kbint = 0;  
-}
-
-
-/**
  * Main routine
  **/
 int main(int argc, char *argv[]) {    
-     signal(SIGINT, intHandler);
+    signal(SIGINT, intHandler);
     /*
      * Read parameters and Initialization
      */
@@ -201,22 +193,24 @@ int main(int argc, char *argv[]) {
 	exit(0);
     }
     const char* adapter = "hci0";
-    const char* car_id  = get_car_mac(argv[1]);
+    char* car_id  = get_car_mac(argv[1]);
     if (argc > 2) {
 	adapter = argv[2];
     }
     init_blob_detector();
+    camera_loc = (camera_localization_t*) malloc(sizeof(camera_localization_t));
 
     /*
      * Load thread to Update picture every second and process it  
      */
     // Set arguments
     struct arg_struct args;
-    args.vehicle_color = "grey";
-    args.update = 100; //time in milliseconds
+    args.vehicle_color = car_id;
+    args.update = 50; //time in milliseconds
     args.background_update = 1000;
     args.background_start = 21;
     args.history = 15;
+    args.verbose = argc > 3;
 
     // Load default background
     background = (shared_struct*) malloc(sizeof(shared_struct));
@@ -225,45 +219,37 @@ int main(int argc, char *argv[]) {
     fread(background->data, IMAGE_SIZE, 1, f);
     fclose(f);
 
-    // Launch thread
+    // Launch camera thread
     int ret = pthread_create (&camera, 0, (void*)update_camera_loc,  &args);
     
     /*
-     * Init vehicle's connection
+     * Set vehicle's behaviour
      */
     // Init bluethooth and wait for connection successful
     fprintf(stderr, "Attempting connection to %s\n", car_id);
     h = anki_s_init(adapter, car_id, argc>3);
     while(!anki_s_is_connected(h) || !anki_s_is_sdk_ctrl_mode(h));
     fprintf(stderr, "Connection successful\n");
+
+    // Set initial speed
     int res;
-
-    // Send commands
     res = anki_s_set_speed(h,600,20000);
-    //print_loc(h);
     
-    /*
-      int i;
-      //for(i=0; i<10; i++){ usleep(200000); anki_s_change_lane(h,-40,100,1000); }  
-      for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
-      anki_s_set_speed(h,500,20000);
-      for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
-      anki_s_change_lane(h,-50,100,1000);
-      for(i=0; i<10; i++){ usleep(200000);  print_loc(h);  }
-      anki_s_set_speed(h,0,20000); */
-    
-    // Test
-    while (kbint && !res && h) {
-	sleep(1);
+    // Run until ctrl-C
+    // print locations every 0.5 seconds
+    while (kbint && !res) {
+	usleep(500*1000);
 	print_loc(h);
-
+	print_camera_loc();
     }
 
-    //TODO bloc fina; + interrupt if disconnected
-    // Disconnect
+    /*
+     * Close and disconnect
+     */
     anki_s_close(h);
     exit_signal = 1;
     pthread_join(camera, NULL);
     free(background);
+    free(camera_loc);
     return 0;
 }
