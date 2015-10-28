@@ -48,7 +48,9 @@ static int ppm_height = 720;
 /**
  * Compute the median image from a sequence of images
  */
+//TODO: multithread
 void compute_median(int nfiles, unsigned char** array, shared_struct* result) {
+	    fprintf(stderr, "Background update\n");
     int i, j;    
     unsigned char pix[nfiles];
     for (j = 0; j < IMAGE_SIZE; j++) {
@@ -66,6 +68,7 @@ void compute_median(int nfiles, unsigned char** array, shared_struct* result) {
 cv::Ptr<cv::SimpleBlobDetector> detector;
 std::vector<KeyPoint> keypoints;
 
+//TODO: find optimal parameters for "bad colors" eg red and blue
 void init_blob_detector() {
     SimpleBlobDetector::Params params;
     //params.thresholdStep = 1;
@@ -80,24 +83,33 @@ void init_blob_detector() {
     detector = cv::SimpleBlobDetector::create(params);
 }
     
-
-void get_camera_loc(shared_struct* shm) {
-    //TO TEST
-    //TODO check block average color
-    //TODO if keypoints empty use anki location
+//TODO Set HSV and check block average color
+void get_camera_loc(shared_struct* shm, int index, int verbose) {
     Mat im = Mat(ppm_height, ppm_width, CV_8UC3, shm->data);
     detector->detect(im, keypoints);
     if (keypoints.size() > 0) {
-	fprintf(stderr, "Camera loc: (%.2f, %.2f) \n",  keypoints[0].pt.x, keypoints[0].pt.y);
+	camera_loc->x = keypoints[0].pt.x;
+	camera_loc->y = keypoints[0].pt.y;
+	camera_loc->size = keypoints[0].size;
+	camera_loc->success = 1;
+	camera_loc->update_time = index;
     } else {
-	fprintf(stderr, "Error, no Camera loc found\n");
+	camera_loc->success = 0;
+	camera_loc->update_time = index;
     }
-    Mat im_with_keypoints;
-    drawKeypoints( im, keypoints, im_with_keypoints, Scalar(0,0,255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
-    char filename[256];
-    snprintf(filename, 255, "/home/cvml1/Code/Images/KPfc2TestImage%08ld.ppm", shm->count);
- imwrite( filename,  im_with_keypoints );
-	
+
+    if (verbose) {
+	if (keypoints.size() > 0) {
+	    fprintf(stderr, "Camera loc: (%.2f, %.2f) \n",  keypoints[0].pt.x, keypoints[0].pt.y);
+	} else {
+	    fprintf(stderr, "Error, no Camera loc found\n");
+	}
+	Mat im_with_keypoints;
+	drawKeypoints( im, keypoints, im_with_keypoints, Scalar(0,0,255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
+	char filename[256];
+	snprintf(filename, 255, "/home/cvml1/Code/Images/KPfc2TestImage%08ld.ppm", shm->count);
+	imwrite( filename,  im_with_keypoints );	
+    }
 }
 
 
@@ -119,7 +131,6 @@ void sub(shared_struct* im1, shared_struct* im2, shared_struct* result){
 /**
  * Substract two camera images with thresolding function
  */
-//TODO instead of 255 opn three channel, put 1 channel and chhose color accordingly
 void sub_thres(shared_struct* im1, shared_struct* im2, shared_struct* result, int threshold){
     int i;
     for (i = 0; i < IMAGE_SIZE; i++) {
@@ -140,7 +151,7 @@ void sub_thres(shared_struct* im1, shared_struct* im2, shared_struct* result, in
 }
 
 /**
- * Export image in a readable PPM file
+ * Export image in a readable PPM file and store output file path in "filename"
  */
 void export_ppm(char* filename, const int width, const int height, shared_struct* shm) {
     char PPMheader[32];
@@ -153,7 +164,7 @@ void export_ppm(char* filename, const int width, const int height, shared_struct
 }
 
 /**
- * Export image without PPm header as a txt file
+ * Export image without PPM header as a txt file and store output file path in "filename"
  */
 void export_txt(char* filename, const int width, const int height, shared_struct* shm) {
     snprintf(filename, 255, "/home/cvml1/Code/Images/fc2TestImage%08ld.txt", shm->count);
