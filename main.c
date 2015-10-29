@@ -16,17 +16,18 @@
 #include <sys/shm.h>
 #include <string.h>
 #include <signal.h>
+#include <time.h>
 
 
 /**
  * Global variables
  */
 static int exit_signal = 0;
-shared_struct* background;
 static pthread_t camera;
 static AnkiHandle h;
 camera_localization_t* camera_loc;
 camera_localization_t* camera_obst;
+shared_struct* background;
 unsigned char** input_median;
 
 
@@ -101,19 +102,13 @@ void update_camera_loc(void* aux) {
     int next_bg_update = bg_start - bg_history;
     shared_struct* temp = (shared_struct*) malloc(sizeof(shared_struct));
 
-    //Init arrays for saving past images TODO input median
-    unsigned char** saved_imgs;
-    saved_imgs = (unsigned char**) malloc(sizeof(unsigned char*) * bg_history);
+    //Init arrays for saving past images for background computation
     int i;
-    for (i = 0; i < bg_history; i++) {
-	saved_imgs[i] = malloc(sizeof(unsigned char) * IMAGE_SIZE);
-    }
-    /*
     input_median = (unsigned char**) malloc(sizeof(unsigned char*) * bg_history);
-    int i;
     for (i = 0; i < bg_history; i++) {
 	input_median[i] = malloc(sizeof(unsigned char) * IMAGE_SIZE);
-    }*/
+    }
+
     /*
      * Update location until receiving exit signal
      */
@@ -125,9 +120,9 @@ void update_camera_loc(void* aux) {
 
 	// Update background if needed
 	if ((next_bg_update - bg_start) % bg_update  == 0) {
-	    next_bg_update += bg_update - bg_history;
-	    compute_median(bg_history, saved_imgs, background);
-	    //compute_median_multithread(bg_history, 4);
+	    next_bg_update += bg_update - bg_history;	
+	    //compute_median(bg_history, input_median, background);
+	    compute_median_multithread(bg_history, 8);
 	    if (verbose) {
 		export_ppm(filename, width, height, background);
 	    }
@@ -135,6 +130,7 @@ void update_camera_loc(void* aux) {
 
 	// Compute differential image in temp and update location
 	temp->count = index + 1;
+	//sub(shm, background, temp);
 	sub_thres(shm, background, temp, 80);
 	get_camera_loc(temp, index, verbose);
 
@@ -145,8 +141,7 @@ void update_camera_loc(void* aux) {
 
 	// If needed, save current image for next background update
 	if (index == next_bg_update) {
-	    memcpy(saved_imgs[(next_bg_update + bg_history - bg_start) % bg_update], shm->data, IMAGE_SIZE);
-	    //memcpy(input_median[(next_bg_update + bg_history - bg_start) % bg_update], shm->data, IMAGE_SIZE);
+	    memcpy(input_median[(next_bg_update + bg_history - bg_start) % bg_update], shm->data, IMAGE_SIZE);
 	    next_bg_update += 1;
 	}	   
 	index += 1;
@@ -157,9 +152,9 @@ void update_camera_loc(void* aux) {
     // Free and close
     if ( shmdt(shm) == -1) { perror("shmdt"); exit(1); } 
     for (i = 0; i < bg_history; i++) {
-	free(saved_imgs[i]);
+	free(input_median[i]);
     }
-    free(saved_imgs);
+    free(input_median);
 } 
 
 
@@ -222,7 +217,7 @@ int main(int argc, char *argv[]) {
     args.vehicle_color = car_id;
     args.update = 50; //time in milliseconds
     args.background_update = 1000;
-    args.background_start = 21;
+    args.background_start = 20;
     args.history = 15;
     args.verbose = argc > 3;
 

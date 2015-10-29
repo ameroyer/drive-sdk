@@ -50,40 +50,39 @@ static int ppm_height = 720;
  * Compute the median image from a sequence of images
  */
 static int nmedian;
+static int nthreads;
 
-struct arg_struct {
-    int start;
-    int end;
-};
-
-void* compute_median_subthread(void* aux) {
+void* compute_median_subthread(void* aux) { 
+    int indx = *((int*) aux);
+    int start = IMAGE_SIZE / nthreads * indx;
+    int end = start + IMAGE_SIZE / nthreads;
+     if (indx == nthreads - 1) {
+	end = IMAGE_SIZE;
+    }
     int i, j;
-    int *indx = (int*)aux;
     unsigned char pix[nmedian];
-    for (j = indx[0]; j < indx[1]; j++) {
+    for (j = start; j < end; j++) {
 	for (i = 0; i < nmedian; i++) {
 	    pix[i] = input_median[i][j];
 	}
-    }
-    background->data[j] = quick_select(pix, nmedian);	
+        background->data[j] = quick_select(pix, nmedian);
+    }	    
 }
 
 void compute_median_multithread(int nfiles, int nthread) {
     fprintf(stderr, "Background update - start\n");
-    nmedian = nfiles;
+    nmedian = nfiles; 
+    nthreads = nthread;
     int i, ret;  
     pthread_t threads[nthread];  
-    int step = IMAGE_SIZE / nthread;
-    // Laun threads
+
+    // Launch threads
     for (i = 0; i < nthread; i++) {
-    	int args[2] = {step * i, step * (i + 1)};
-	if (i == nthread - 1) {
-	    args[1] = IMAGE_SIZE;
-	}
-        ret = pthread_create (&(threads[i]), 0, compute_median_subthread,  &args);
+        ret = pthread_create (&(threads[i]), 0, compute_median_subthread,  new int(i));
     }
+
     // Join threads
-    for ( i = 0; i < nthread; i++) {
+    for (i = 0; i < nthread; i++) {
         pthread_join(threads[i], NULL);
     }
     fprintf(stderr, "Background update - end\n");
@@ -120,7 +119,7 @@ void init_blob_detector() {
     params.filterByConvexity = 0;
     params.filterByCircularity = 0;
     params.filterByArea = 1;
-    params.minArea = 450;
+    params.minArea = 400;
     params.maxArea = 3200;
     detector = cv::SimpleBlobDetector::create(params);
 }
