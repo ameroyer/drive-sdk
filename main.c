@@ -22,10 +22,12 @@
  * Global variables
  */
 static int exit_signal = 0;
-static shared_struct* background;
+shared_struct* background;
 static pthread_t camera;
 static AnkiHandle h;
 camera_localization_t* camera_loc;
+camera_localization_t* camera_obst;
+unsigned char** input_median;
 
 
 /**
@@ -53,7 +55,7 @@ void print_loc(AnkiHandle h){
  */
 void print_camera_loc(){
     if (camera_loc->success) {
-	printf("Location: x: %.2f y: %.2f size: %.2f last-update: %i\n",
+	printf("Camera location: x: %.2f y: %.2f size: %.2f last-update: %i\n",
 	       camera_loc->x, camera_loc->y, camera_loc->size, camera_loc->update_time);
     } else {
 	printf("Error in camera detection at time %i\n", camera_loc->update_time); 
@@ -99,18 +101,23 @@ void update_camera_loc(void* aux) {
     int next_bg_update = bg_start - bg_history;
     shared_struct* temp = (shared_struct*) malloc(sizeof(shared_struct));
 
-    //Init arrays for saving past images
+    //Init arrays for saving past images TODO input median
     unsigned char** saved_imgs;
     saved_imgs = (unsigned char**) malloc(sizeof(unsigned char*) * bg_history);
     int i;
     for (i = 0; i < bg_history; i++) {
 	saved_imgs[i] = malloc(sizeof(unsigned char) * IMAGE_SIZE);
     }
-
+    /*
+    input_median = (unsigned char**) malloc(sizeof(unsigned char*) * bg_history);
+    int i;
+    for (i = 0; i < bg_history; i++) {
+	input_median[i] = malloc(sizeof(unsigned char) * IMAGE_SIZE);
+    }*/
     /*
      * Update location until receiving exit signal
      */
-    while (!exit_signal && !kbint) {
+    while (!exit_signal && kbint) {
 	// DEBUG
 	if (verbose) {
 	    fprintf(stderr, "Index: %d - Next bg update: %d - Current saving index: %d\n", index, next_bg_update  - next_bg_update%bg_update + bg_start, (next_bg_update + bg_history - bg_start) % bg_update);
@@ -120,6 +127,7 @@ void update_camera_loc(void* aux) {
 	if ((next_bg_update - bg_start) % bg_update  == 0) {
 	    next_bg_update += bg_update - bg_history;
 	    compute_median(bg_history, saved_imgs, background);
+	    //compute_median_multithread(bg_history, 4);
 	    if (verbose) {
 		export_ppm(filename, width, height, background);
 	    }
@@ -138,6 +146,7 @@ void update_camera_loc(void* aux) {
 	// If needed, save current image for next background update
 	if (index == next_bg_update) {
 	    memcpy(saved_imgs[(next_bg_update + bg_history - bg_start) % bg_update], shm->data, IMAGE_SIZE);
+	    //memcpy(input_median[(next_bg_update + bg_history - bg_start) % bg_update], shm->data, IMAGE_SIZE);
 	    next_bg_update += 1;
 	}	   
 	index += 1;
@@ -189,13 +198,18 @@ int main(int argc, char *argv[]) {
      * Read parameters and Initialization
      */
     if(argc<2){
-	fprintf(stderr, "usage: %s car-name [adaptater] [verbose]\n",argv[0]);
+	fprintf(stderr, "usage: %s car-name [nbr of cars] [adaptater] [verbose]\n",argv[0]);
 	exit(0);
     }
     const char* adapter = "hci0";
     char* car_id  = get_car_mac(argv[1]);
+    int opponents = 3;
     if (argc > 2) {
 	adapter = argv[2];
+	if (argc > 3) {
+		opponents = atoi(argv[3]);
+    		camera_obst = (camera_localization_t*) malloc(sizeof(camera_localization_t) * opponents);
+	}
     }
     init_blob_detector();
     camera_loc = (camera_localization_t*) malloc(sizeof(camera_localization_t));
@@ -241,6 +255,7 @@ int main(int argc, char *argv[]) {
 	usleep(500*1000);
 	print_loc(h);
 	print_camera_loc();
+	printf("\n");
     }
 
     /*

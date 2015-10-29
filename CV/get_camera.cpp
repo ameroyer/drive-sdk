@@ -33,6 +33,7 @@
 #include "/usr/local/include/opencv2/opencv.hpp"
 #include "quickselect.h"
 #include "get_camera.hpp"
+#include <pthread.h>
 using namespace cv;
 
 
@@ -48,9 +49,49 @@ static int ppm_height = 720;
 /**
  * Compute the median image from a sequence of images
  */
-//TODO: multithread
+static int nmedian;
+
+struct arg_struct {
+    int start;
+    int end;
+};
+
+void* compute_median_subthread(void* aux) {
+    int i, j;
+    int *indx = (int*)aux;
+    unsigned char pix[nmedian];
+    for (j = indx[0]; j < indx[1]; j++) {
+	for (i = 0; i < nmedian; i++) {
+	    pix[i] = input_median[i][j];
+	}
+    }
+    background->data[j] = quick_select(pix, nmedian);	
+}
+
+void compute_median_multithread(int nfiles, int nthread) {
+    fprintf(stderr, "Background update - start\n");
+    nmedian = nfiles;
+    int i, ret;  
+    pthread_t threads[nthread];  
+    int step = IMAGE_SIZE / nthread;
+    // Laun threads
+    for (i = 0; i < nthread; i++) {
+    	int args[2] = {step * i, step * (i + 1)};
+	if (i == nthread - 1) {
+	    args[1] = IMAGE_SIZE;
+	}
+        ret = pthread_create (&(threads[i]), 0, compute_median_subthread,  &args);
+    }
+    // Join threads
+    for ( i = 0; i < nthread; i++) {
+        pthread_join(threads[i], NULL);
+    }
+    fprintf(stderr, "Background update - end\n");
+}
+
+
 void compute_median(int nfiles, unsigned char** array, shared_struct* result) {
-	    fprintf(stderr, "Background update\n");
+	    fprintf(stderr, "Background update - start\n");
     int i, j;    
     unsigned char pix[nfiles];
     for (j = 0; j < IMAGE_SIZE; j++) {
@@ -59,6 +100,7 @@ void compute_median(int nfiles, unsigned char** array, shared_struct* result) {
 	}
 	result->data[j] = quick_select(pix, nfiles);
     }
+	    fprintf(stderr, "Background update - end\n");
 }
 
 
@@ -83,7 +125,24 @@ void init_blob_detector() {
     detector = cv::SimpleBlobDetector::create(params);
 }
     
+
+
 //TODO Set HSV and check block average color
+char* get_car_from_hue(int h) {
+
+}
+
+int get_mean_rgb(unsigned char* data, int x, int y, int r) {
+int i, j;
+//int r, g, b;
+for (i = x - r; i < x + r; i++) {
+for (j = y - r; j < y + r; j++) {
+	
+}}
+	
+}
+
+
 void get_camera_loc(shared_struct* shm, int index, int verbose) {
     Mat im = Mat(ppm_height, ppm_width, CV_8UC3, shm->data);
     detector->detect(im, keypoints);
