@@ -28,11 +28,15 @@ extern "C" {
     } camera_localization_t
     ;
     extern camera_localization_t* camera_loc;
+    extern camera_localization_t* camera_obst; //Array: position of other cars
+    extern unsigned char** input_median;
+    extern shared_struct* background;
 
     /**
      * Compute the median image from a sequence of images
      */
     void compute_median(int nfiles, unsigned char** array, shared_struct* result);
+    void compute_median_multithread(int nfiles, int nthread);
 
 
     /**
