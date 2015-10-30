@@ -21,10 +21,10 @@ where:
 
 1. Basic features, using only position (Goal: 1 car, 10 laps, optimize time)
 ----------------------------------------------------------------------------
-- Detect if vehicle is going in the wrong direction -> Uturn
+- Detect if vehicle is going in the wrong direction -> Uturn [Kathi, error in uturn fct]
 - Prevent the vehicle from going outside the red borders
 - Create a function that returns the lane and track piece given the localisation informatin output by the vehicle
-- Detect if the vehicle is out of the road (no localisation information) and try to set random speed to get back in track
+- Detect if the vehicle is out of the road (no localisation information) and try to set random speed to get back in track [Kathi, works in some cases]
 - Detect if vehicle gets disconnected and reconnect
 - Create a policy function that set the vehicle's speed/lane depending on its position
 - Use HSV colorspace instead of RGB
@@ -32,8 +32,8 @@ where:
 
 2. Adding Computer Vision (CV) and Machine Learning (ML) 
 --------------------------------------------------------
-- (CV) Get default background image				[Done]
-- Improve background computation (Multithread) + faster timerate to extract images for the median
+- (CV) Get default background image				[Done (Multithread)]
+- (CV) Apply some kind of normalization in high lights zone to detect ligh cars (orange, yellow)
 - (CV) Detect where the turns and straight parts of the track are
 - (CV) Detect vehicles' positions (background substraction) []  [Done]
 - (CV) Finetune parameters of blob detection for different colors (eg bad case = red and grey)
