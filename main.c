@@ -219,7 +219,7 @@ int main(int argc, char *argv[]) {
     args.background_update = 1000;
     args.background_start = 20;
     args.history = 15;
-    args.verbose = argc > 3;
+    args.verbose = argc > 4;
 
     // Load default background
     background = (shared_struct*) malloc(sizeof(shared_struct));
@@ -236,14 +236,18 @@ int main(int argc, char *argv[]) {
      */
     // Init bluethooth and wait for connection successful
     fprintf(stderr, "Attempting connection to %s\n", car_id);
-    h = anki_s_init(adapter, car_id, argc>3);
+    h = anki_s_init(adapter, car_id, argc>4);
     while(!anki_s_is_connected(h) || !anki_s_is_sdk_ctrl_mode(h));
     fprintf(stderr, "Connection successful\n");
 
     // Set initial speed
     int res;
     res = anki_s_set_speed(h,600,20000);
-    
+    // Define correct direction
+    int race_clockwise=0;
+
+    int update_time_previous=-1;
+
     // Run until ctrl-C
     // print locations every 0.5 seconds
     while (kbint && !res) {
@@ -251,6 +255,18 @@ int main(int argc, char *argv[]) {
 	print_loc(h);
 	print_camera_loc();
 	printf("\n");
+	//check if car stands till (no update of loc information) and set speed randomly  if so
+	if(update_time_previous==anki_s_get_localization(h).update_time){
+		printf("standing still\n");		 
+		anki_s_set_speed(h,500+1000*((double) rand() / (RAND_MAX)),20000);
+		
+	}
+	//check direction and perform uturn if false
+	if(anki_s_get_localization(h).is_clockwise!=race_clockwise){
+		anki_s_uturn(h); //TODO: does not work!
+		printf("uturn\n");
+	}
+	update_time_previous=anki_s_get_localization(h).update_time;
     }
 
     /*
