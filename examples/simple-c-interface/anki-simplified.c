@@ -348,6 +348,8 @@ int anki_s_uturn(AnkiHandle ankihandle)
   anki_vehicle_msg_t msg;
   size_t plen = anki_vehicle_msg_turn_180(&msg);
   gatt_write_char(h->attrib, handle, (uint8_t *)&msg, plen, NULL, NULL);
+  //Update loc immediately if successful
+  h->loc.is_clockwise = 1 - h->loc.is_clockwise;
   return 0;
 }
 
