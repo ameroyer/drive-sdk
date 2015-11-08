@@ -18,15 +18,28 @@
 #include <signal.h>
 #include <time.h>
 
+// Bash colors
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KBLU  "\x1B[34m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define KWHT  "\x1B[37m"
+#define KBOLD  "\x1B[1m"
+#define RESET "\033[0m"
 
 /**
  * Global variables
  */
+static int camera_index; //index for camera update
+static int run_index; //index for global simulation update
 static int exit_signal = 0;
 static pthread_t camera;
 static AnkiHandle h;
 camera_localization_t* camera_loc;
-camera_localization_t* camera_obst;
+camera_obst_localization_t* camera_obst;
 shared_struct* background;
 unsigned char** input_median;
 
@@ -46,7 +59,7 @@ void intHandler(int sig) {
 void print_loc(AnkiHandle h){
     localization_t loc;
     loc = anki_s_get_localization(h);
-    printf("Location: segm: %03x subsegm: %03x clock-wise: %i last-update: %i\n",
+    printf(KBLU "[Location]" RESET " segm: %03x subsegm: %03x clock-wise: %i last-update: %i\n",
 	   loc.segm, loc.subsegm, loc.is_clockwise, loc.update_time);
 }
 
@@ -56,10 +69,12 @@ void print_loc(AnkiHandle h){
  */
 void print_camera_loc(){
     if (camera_loc->success) {
-	printf("Camera location: x: %.2f y: %.2f size: %.2f last-update: %i\n",
+	printf(KBOLD KGRN "[Camera location]" RESET " x: %.2f y: %.2f size: %.2f last-update: %i\n",
 	       camera_loc->x, camera_loc->y, camera_loc->size, camera_loc->update_time);
     } else {
-	printf("Error in camera detection at time %i\n", camera_loc->update_time); 
+	float result[2];
+	get_camera_lock_dead_reckon(camera_index, result);
+	printf(KBOLD KRED "[Camera location (DR)]" RESET " x: %.2f y: %.2f size: %.2f last-update: %i\n", result[0], result[1], camera_loc->size, camera_loc->update_time); 
     }
 }
 
@@ -69,12 +84,14 @@ void print_camera_loc(){
 // Struct type to pass arguments to thread
 struct arg_struct {
     char* vehicle_color;   // Our vehicle's color
+	int nobstacles;
     int update;            // Image update (time in millisecond)
     int background_update; // new background every X image updates
     int background_start;  // index of first background computation
     int history;           // nbr of images for bacground computation
     int verbose;           // 0-1: set verbosity level
 };
+
 
 // Main function run on the thread
 void update_camera_loc(void* aux) {
@@ -85,6 +102,8 @@ void update_camera_loc(void* aux) {
     int bg_start = args->background_start;
     int bg_update = args->background_update;
     int verbose = args->verbose;
+    char* car_name = args->vehicle_color;
+	int nobstacles = args->nobstacles;
 
     // Init shared memory
     int shmid;
@@ -97,7 +116,7 @@ void update_camera_loc(void* aux) {
     if ((shm = (shared_struct*)shmat(shmid, NULL, 0)) == (shared_struct *) -1) { perror("shmat"); exit(1); }
 
     // Additional Paramaters
-    int index = 0;
+    camera_index = 0;
     char filename[256];
     int next_bg_update = bg_start - bg_history;
     shared_struct* temp = (shared_struct*) malloc(sizeof(shared_struct));
@@ -115,7 +134,7 @@ void update_camera_loc(void* aux) {
     while (!exit_signal && kbint) {
 	// DEBUG
 	if (verbose) {
-	    fprintf(stderr, "Index: %d - Next bg update: %d - Current saving index: %d\n", index, next_bg_update  - next_bg_update%bg_update + bg_start, (next_bg_update + bg_history - bg_start) % bg_update);
+	    fprintf(stderr, "Index: %d - Next bg update: %d - Current saving index: %d\n", camera_index, next_bg_update  - next_bg_update%bg_update + bg_start, (next_bg_update + bg_history - bg_start) % bg_update);
 	}
 
 	// Update background if needed
@@ -129,22 +148,16 @@ void update_camera_loc(void* aux) {
 	}
 
 	// Compute differential image in temp and update location
-	temp->count = index + 1;
-	//sub(shm, background, temp);
-	sub_thres(shm, background, temp, 80);
-	get_camera_loc(temp, index, verbose);
-
-	// DEBUG
-	if (verbose) {
-	    export_ppm(filename, width, height, temp);
-	}
+	temp->count = camera_index + 1;
+	sub_thres_min(shm, background, temp, 80);
+	get_camera_loc(temp, camera_index, verbose, car_name, nobstacles);
 
 	// If needed, save current image for next background update
-	if (index == next_bg_update) {
+	if (camera_index == next_bg_update) {
 	    memcpy(input_median[(next_bg_update + bg_history - bg_start) % bg_update], shm->data, IMAGE_SIZE);
 	    next_bg_update += 1;
 	}	   
-	index += 1;
+	camera_index += 1;
 	usleep(img_update * 1000);
     }
     
@@ -184,6 +197,31 @@ char* get_car_mac(char* color) {
 } 
 
 
+
+/**
+ * Return car's color given color or name
+ */
+char* get_car_color(char* color) {
+    if (!strcmp(color, "grey") || !strcmp(color, "boson") || !strcmp(color, "gray")) {
+        return "grey"; 
+    }
+    else if (!strcmp(color, "blue") || !strcmp(color, "katal")) {
+        return "blue";
+    }
+    else if (!strcmp(color, "koural") || !strcmp(color, "yellow")) {
+        return "yellow";
+    }
+    else if (!strcmp(color, "nuke") || !strcmp(color, "green")) {
+        return "green";
+    }
+    else if (!strcmp(color, "hadion") || !strcmp(color, "orange")) {
+        return "orange";
+    }
+    else {
+        return "red";
+    }
+} 
+
 /**
  * Main routine
  **/
@@ -200,22 +238,23 @@ int main(int argc, char *argv[]) {
     char* car_id  = get_car_mac(argv[1]);
     int opponents = 3;
     if (argc > 2) {
-	adapter = argv[2];
+	opponents = atoi(argv[2]);
 	if (argc > 3) {
-		opponents = atoi(argv[3]);
-    		camera_obst = (camera_localization_t*) malloc(sizeof(camera_localization_t) * opponents);
-	}
+		adapter = argv[3];
+	   }
     }
+    camera_obst = (camera_obst_localization_t*) malloc(sizeof(camera_obst_localization_t));
+    camera_obst->total = opponents;
     init_blob_detector();
     camera_loc = (camera_localization_t*) malloc(sizeof(camera_localization_t));
 
     /*
-     * Load thread to Update picture every second and process it  
+     * Load thread to update picture every second and process it  
      */
     // Set arguments
     struct arg_struct args;
-    args.vehicle_color = car_id;
-    args.update = 50; //time in milliseconds
+    args.vehicle_color = get_car_color(argv[1]);
+    args.update = 100; //time in milliseconds
     args.background_update = 1000;
     args.background_start = 20;
     args.history = 15;
@@ -240,33 +279,45 @@ int main(int argc, char *argv[]) {
     while(!anki_s_is_connected(h) || !anki_s_is_sdk_ctrl_mode(h));
     fprintf(stderr, "Connection successful\n");
 
-    // Set initial speed
+    // Additional parameters
     int res;
-    res = anki_s_set_speed(h,600,20000);
-    // Define correct direction
-    int race_clockwise=0;
-
-    int update_time_previous=-1;
+    run_index = 0;
+    int lookup_update = 500;
+    int is_still = 0;
+    int previous_camera_loc[2] = {camera_loc->x, camera_loc->y};
 
     // Run until ctrl-C
-    // print locations every 0.5 seconds
+    res = anki_s_set_speed(h,600,20000);
+    usleep(500*1000);
+    int race_clockwise=1;	
+
     while (kbint && !res) {
-	usleep(500*1000);
+	// Print
 	print_loc(h);
 	print_camera_loc();
 	printf("\n");
-	//check if car stands till (no update of loc information) and set speed randomly  if so
-	if(update_time_previous==anki_s_get_localization(h).update_time){
-		printf("standing still\n");		 
-		anki_s_set_speed(h,500+1000*((double) rand() / (RAND_MAX)),20000);
-		
+
+
+	// Check if car stands still (no update of loc information) and set speed randomly  if so
+	if(camera_loc->success && previous_camera_loc[0] == camera_loc->x && previous_camera_loc[1] == camera_loc->y){	
+		is_still = 1; 
+		fprintf(stderr, "standing still\n");	
+		anki_s_set_speed(h,500 + 1000 * ((double) rand() / (RAND_MAX)), 20000);		
 	}
-	//check direction and perform uturn if false
-	if(anki_s_get_localization(h).is_clockwise!=race_clockwise){
-		anki_s_uturn(h); //TODO: does not work!
-		printf("uturn\n");
+
+	// Check direction and perform uturn if false
+	localization_t loc = anki_s_get_localization(h);
+	if(loc.update_time > 0 && loc.is_clockwise != race_clockwise && !is_still){
+		anki_s_uturn(h);
+		fprintf(stderr, "U-turn\n");
 	}
-	update_time_previous=anki_s_get_localization(h).update_time;
+
+	previous_camera_loc[0] = camera_loc->x;
+	previous_camera_loc[1] = camera_loc->y;
+
+	// Sleep
+	run_index += 1;
+	usleep(lookup_update*1000);
     }
 
     /*

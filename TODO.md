@@ -1,6 +1,7 @@
 TODO LIST - CVML Project
 ========================
 
+RED Car (orange...)
 
 -1. Some information we observed
 --------------------------------
@@ -21,23 +22,21 @@ where:
 
 1. Basic features, using only position (Goal: 1 car, 10 laps, optimize time)
 ----------------------------------------------------------------------------
-- Detect if vehicle is going in the wrong direction -> Uturn [Kathi, error in uturn fct]
+- Detect if vehicle is going in the wrong direction -> Uturn [Done]
 - Prevent the vehicle from going outside the red borders
-- Create a function that returns the lane and track piece given the localisation informatin output by the vehicle
-- Detect if the vehicle is out of the road (no localisation information) and try to set random speed to get back in track [Kathi, works in some cases]
+- Create a function that returns the lane and track piece given the localisation information output by the vehicle
+- Detect if the vehicle is out of the road (no localisation information) and try to set random speed to get back in track [Done]
 - Detect if vehicle gets disconnected and reconnect
 - Create a policy function that set the vehicle's speed/lane depending on its position
-- Use HSV colorspace instead of RGB
 
 
 2. Adding Computer Vision (CV) and Machine Learning (ML) 
 --------------------------------------------------------
 - (CV) Get default background image				[Done (Multithread)]
-- (CV) Apply some kind of normalization in high lights zone to detect ligh cars (orange, yellow)
 - (CV) Detect where the turns and straight parts of the track are
-- (CV) Detect vehicles' positions (background substraction) []  [Done]
-- (CV) Finetune parameters of blob detection for different colors (eg bad case = red and grey)
+- (CV) Detect vehicles' positions (background substraction)   [Done]
 - (CV) Detect red borders/limits of the track
+- (CV) Detect color of the car using hsv space   [Done with saturation/value thresholding]
 - (ML) Implement Reinforcement Learning/Q-Learning for the situation with only one car to get the best policy
 
 
@@ -50,3 +49,10 @@ where:
 4. And a new track!
 -------------------
 - Hopefully hat we implemented for (CV) and (ML) should apply well to the new track
+
+
+5. Less important tasks / Finetuning
+-------------------------------------
+- (CV) Apply some kind of normalization in high lights zone to detect ligh cars (orange, yellow)
+- (CV) Finetune parameters of blob detection for different colors (eg bad case = red and grey)
+- Totest: init background as current picture (less waiting time)
