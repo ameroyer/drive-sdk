@@ -1,7 +1,13 @@
-TODO LIST - CVML Project
-========================
+TODO LIST - CVML Project (Rho)
+==============================
 
-RED Car (orange...)
+
+Next Week
+---------
+- (TODO) Update the Github
+- (TODO) Create optimal deterministic policy for one car
+- (TODO) Start the Machine Learning process
+- Meet in the demo room
 
 -1. Some information we observed
 --------------------------------
@@ -9,6 +15,7 @@ RED Car (orange...)
 - Maximum safe speed outside lane ~ 1700
 - PieceID = ID of the track piece the vehicle is on (8 pieces)
 - LocalisationID = ID of the horizontal "dash" the vehicle is on
+- 5/10 commands a second seems to be the botlleneck for the C interface (set update period accordingly)
 
 0. Main
 -------
@@ -23,21 +30,26 @@ where:
 1. Basic features, using only position (Goal: 1 car, 10 laps, optimize time)
 ----------------------------------------------------------------------------
 - Detect if vehicle is going in the wrong direction -> Uturn [Done]
-- Prevent the vehicle from going outside the red borders
-- Create a function that returns the lane and track piece given the localisation information output by the vehicle
 - Detect if the vehicle is out of the road (no localisation information) and try to set random speed to get back in track [Done]
+- Prevent the vehicle from going outside the red borders
 - Detect if vehicle gets disconnected and reconnect
-- Create a policy function that set the vehicle's speed/lane depending on its position
+- Control several cars
+- Add human interface
 
 
 2. Adding Computer Vision (CV) and Machine Learning (ML) 
 --------------------------------------------------------
 - (CV) Get default background image				[Done (Multithread)]
-- (CV) Detect where the turns and straight parts of the track are
-- (CV) Detect vehicles' positions (background substraction)   [Done]
-- (CV) Detect red borders/limits of the track
+- (CV) Detect vehicles' positions (background substraction).   [Done]
+- (CV) Detect red borders/limits of the track	  		[Done]
 - (CV) Detect color of the car using hsv space   [Done with saturation/value thresholding]
+- (CV) Take a picture as the start of the race for default background (better color match)
+- (CV) Partition the track   [Done]
+- (CV) Detect curvatures of the track
+
+- (ML) Create a policy function that set the vehicle's speed/lane depending on its position
 - (ML) Implement Reinforcement Learning/Q-Learning for the situation with only one car to get the best policy
+- (ML) Create main q-learning algorithm structure
 
 
 3. With opponents...
@@ -45,6 +57,7 @@ where:
 - Think about good strategies when you have opponents
 - (ML) Try to adapt the learning algorithm to a situation where you have 1 or multiple opponents
 - (CV) Keep track of your other opponent's position/distance from the goal
+
 
 4. And a new track!
 -------------------
@@ -55,4 +68,3 @@ where:
 -------------------------------------
 - (CV) Apply some kind of normalization in high lights zone to detect ligh cars (orange, yellow)
 - (CV) Finetune parameters of blob detection for different colors (eg bad case = red and grey)
-- Totest: init background as current picture (less waiting time)
