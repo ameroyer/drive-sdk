@@ -6,7 +6,6 @@
 
 #include "examples/simple-c-interface/anki-simplified.h"
 #include "CV/get_camera.hpp"
-#include "ML/state.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -40,8 +39,6 @@ static int run_index = 0; //index for global simulation update
 static int exit_signal = 0;
 static pthread_t camera; // Thread running the camera detection
 static AnkiHandle h;
-static State* states_list; // List of all possible states
-static int current_state; //  index of the current state the vehicle is in
 camera_localization_t* camera_loc;
 camera_obst_localization_t* camera_obst;
 shared_struct* background;
@@ -96,6 +93,7 @@ struct arg_struct {
     int n_obst;            //nbr  of opponents on the track
     int verbose;           // 0-1: set verbosity level
 };
+    
 
 
 // Main function run on the camera detection thread

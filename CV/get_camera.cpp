@@ -35,8 +35,12 @@
 #include "get_camera.hpp"
 #include <pthread.h>
 #include <math.h>
+#include "../ML/state.hpp"
+
 using namespace cv;
 
+
+// Constants
 static int ppm_width = 1696;
 static int ppm_height = 720;
 static volatile int keepRunning = 1;
@@ -45,6 +49,8 @@ void intHandler(int dummy) {
     keepRunning = 0;
 }
 
+// List of discrete states/ centroids
+static std::vector<State> states_list; // List of all possible states
 
 /**
  * Compute the median image from a sequence of images
@@ -215,6 +221,21 @@ int get_mean_hue(unsigned char* data, int x, int y, int ray) {
     return hue/total;
 }
 
+// Get discretized state corresponding to a position
+int get_state(float x, float y) {
+    float min_dist = 5000000;
+    float d;
+    int result;
+    for(std::vector<State>::iterator it = states_list.begin(); it != states_list.end(); ++it) {
+	d = it->get_distance_squared(x, y);
+	if (d < min_dist) {
+	    min_dist = d;
+	    result = it->get_id();
+	}
+    }
+    return result;
+}
+
 // Update the camera location for our car and the other (obstacles)
 void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_color) {
     // Detection
@@ -238,14 +259,15 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 	    camera_loc->x = (*it).pt.x;
 	    camera_loc->y = (*it).pt.y;
 	    camera_loc->size = (*it).size;
+	    camera_loc->state = get_state((*it).pt.x, (*it).pt.y);
 
-	    // Update additional parameters
 	    camera_loc->success = 1;
 	} 
 	else if (obst < camera_obst->total) {
 	    camera_obst->obst[obst*3] = (*it).pt.x;
 	    camera_obst->obst[obst*3 + 1] = (*it).pt.y;
 	    camera_obst->obst[obst*3 + 2] = (*it).size;
+	    camera_obst->states[obst] = get_state((*it).pt.x, (*it).pt.y);
 	}
     }	
     camera_obst->found = obst;
