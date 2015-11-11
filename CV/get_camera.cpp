@@ -37,15 +37,14 @@
 #include <math.h>
 using namespace cv;
 
-
+static int ppm_width = 1696;
+static int ppm_height = 720;
 static volatile int keepRunning = 1;
 
 void intHandler(int dummy) {
     keepRunning = 0;
 }
 
-static int ppm_width = 1696;
-static int ppm_height = 720;
 
 /**
  * Compute the median image from a sequence of images
@@ -53,6 +52,7 @@ static int ppm_height = 720;
 static int nmedian;
 static int nthreads;
 
+// Multithread version
 void* compute_median_subthread(void* aux) { 
     int indx = *((int*) aux);
     int start = IMAGE_SIZE / nthreads * indx;
@@ -89,7 +89,7 @@ void compute_median_multithread(int nfiles, int nthread) {
     fprintf(stderr, "Background update - end\n");
 }
 
-
+// One thread version
 void compute_median(int nfiles, unsigned char** array, shared_struct* result) {
 	    fprintf(stderr, "Background update - start\n");
     int i, j;    
@@ -113,9 +113,7 @@ std::vector<KeyPoint> keypoints;
 // Init blob detection method
 void init_blob_detector() {
     SimpleBlobDetector::Params params;
-    //params.thresholdStep = 1;
-    //params.minThreshold = 120;
-    //params.maxThreshold = 122;
+    params.minThreshold = 80;
     params.filterByColor = 0;
     params.filterByConvexity = 0;
     params.filterByCircularity = 0;
@@ -126,7 +124,7 @@ void init_blob_detector() {
 }    
 
 
-// Return the color of the object given its hue
+// Return the most likely color name associated to a hue value
 const char* get_car_from_hue(int h) {
     if (h < 30 || h > 270) {
 	return "red";
@@ -139,12 +137,11 @@ const char* get_car_from_hue(int h) {
     } else {
 	return "blue";
     }
-
 }
 
 // Return hue, saturation and value of a rgb color
 void get_hsv_from_rgb(float r, float g, float b, float* result) {
-    // Get min and max
+    // Get min and max in the color triplet
     float max = r;
     float min = g;
     if (r < b) {
@@ -200,15 +197,18 @@ int get_mean_hue(unsigned char* data, int x, int y, int ray) {
     int starty =  (y >= ray) ? y - ray : 0;
     int endy =  (y + ray < ppm_height) ? y + ray : ppm_height;
     int line = starty * ppm_width * 3;
+
     for (i = starty; i < endy; i++) {
         for (j = startx; j < endx; j++) {
             col = line + j * 3;
 	    get_hsv_from_rgb(data[col] , data[col+1], data[col+2], result);
+
 	    // If acceptable value (ie no black or white), count it
 	    if (result[2] < 0.9 && result[1] > 0.25) {
 	    	hue += result[0];
 		total += 1;
 	    }
+
         }
 	line += ppm_width * 3;
     }
@@ -217,44 +217,42 @@ int get_mean_hue(unsigned char* data, int x, int y, int ray) {
 
 // Update the camera location for our car and the other (obstacles)
 void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_color) {
-    Mat im;
-    
+    // Detection
+    Mat im;    
     cvtColor(Mat(ppm_height, ppm_width, CV_8UC3, shm->data), im, COLOR_BGR2HSV);
     detector->detect(im, keypoints);
-    if (keypoints.size() > 0) {
-	int i, h;
-	int success = 0;
-	int obst = 0;
-	for (i = 0; i < keypoints.size(); i++) {
-	    h = get_mean_hue(shm->data, (int) keypoints[i].pt.x, (int) keypoints[i].pt.y, (int) (0.5 * keypoints[i].size));
-	    if (camera_obst->total == 0 || !strcmp(get_car_from_hue(h), car_color)) {
-		// Update speed
-		camera_loc->direction[0] = (keypoints[i].pt.x - camera_loc-> x);
-		camera_loc->direction[1] = (keypoints[i].pt.y - camera_loc-> y);
-		camera_loc->speed = 1. / (index - camera_loc->update_time);
-		// Update position
-		camera_loc->x = keypoints[i].pt.x;
-		camera_loc->y = keypoints[i].pt.y;
-		camera_loc->size = keypoints[i].size;
-		// Update additional parameters
-		camera_loc->success = 1;
-		camera_loc->update_time = index;
-		success = 1;
-		} 
-	    else if (obst < camera_obst->total) {
-		camera_obst->obst[obst*3] = keypoints[i].pt.x;
-		camera_obst->obst[obst*3 + 1] = keypoints[i].pt.y;
-		camera_obst->obst[obst*3 + 2] = keypoints[i].size;
-		}
+
+    // Finding car
+    int h;
+    int obst = 0;
+    camera_loc->success = 0;
+    for(std::vector<KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
+	h = get_mean_hue(shm->data, (int) *it.pt.x, (int) *it.pt.y, (int) (0.5 * *it.size));
+	if (camera_obst->total == 0 || !strcmp(get_car_from_hue(h), car_color)) {
+	    // Update speed and direction
+	    camera_loc->direction[0] = (keypoints[i].pt.x - camera_loc-> x);
+	    camera_loc->direction[1] = (keypoints[i].pt.y - camera_loc-> y);
+	    camera_loc->speed = 1. / (index - camera_loc->update_time);
+
+	    // Update position
+	    camera_loc->x = keypoints[i].pt.x;
+	    camera_loc->y = keypoints[i].pt.y;
+	    camera_loc->size = keypoints[i].size;
+
+	    // Update additional parameters
+	    camera_loc->success = 1;
+	    success = 1;
+	} 
+	else if (obst < camera_obst->total) {
+	    camera_obst->obst[obst*3] = keypoints[i].pt.x;
+	    camera_obst->obst[obst*3 + 1] = keypoints[i].pt.y;
+	    camera_obst->obst[obst*3 + 2] = keypoints[i].size;
 	}
-	if (!success) {
-	camera_loc->success = 0;
-	}	
-	camera_obst->found = obst;
-	camera_obst->update_time = obst;
-    } else {
-	camera_loc->success = 0;
-    }
+    }	
+    camera_obst->found = obst;
+} 
+camera_obst->update_time = index;
+camera_loc->update_time = index;
 
     // Additional verbose output
     if (verbose) {
@@ -278,6 +276,7 @@ void get_camera_lock_dead_reckon(int time, float result[2]) {
 	result[0] = camera_loc->x + camera_loc->speed * (time - camera_loc->update_time) * camera_loc->direction[0];
 	result[1] = camera_loc->y + camera_loc->speed * (time - camera_loc->update_time) * camera_loc->direction[1];
 }
+
 
 /**
  * Substract two camera images
