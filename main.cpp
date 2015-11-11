@@ -109,6 +109,7 @@ void* update_camera_loc(void* aux) {
 
     //Init structures
     init_blob_detector();
+    init_states_list("CV/centroids_h100_v3");
     camera_obst = (camera_obst_localization_t*) malloc(sizeof(camera_obst_localization_t));
     camera_obst->total = args->n_obst;
     camera_loc = (camera_localization_t*) malloc(sizeof(camera_localization_t));
@@ -292,13 +293,17 @@ int main(int argc, char *argv[]) {
 
     // Start Run until ctrl-C
     res = anki_s_set_speed(h,600,20000);
-
     while (kbint && !res) {
 	// Display
 	print_loc(h);
 	print_camera_loc();
 	printf("\n");
 
+	// Control [TODO, when policy are active]
+	//TODO replace int by State in camera->state
+	//Policy Q = ....;
+	//Action a = Q.get_next_action(camera->state);
+	//a.apply(h);
 
 	// Check if car stands still (no update of loc information) and set speed randomly  if so
 	if(camera_loc->success && previous_camera_loc[0] == camera_loc->x && previous_camera_loc[1] == camera_loc->y){

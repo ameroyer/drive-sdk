@@ -4,8 +4,11 @@ TODO LIST - CVML Project (Rho)
 
 Next Week
 ---------
+- (TODO) Load/init the list of centroids/discretized states [Amelie]
 - (TODO) Create optimal deterministic policy for one car
 - (TODO) Start the Machine Learning process
+- (TODO) get coordinates of starting point on the picture
+- (TODO) Compute time taken for one lap for the car
 - Meet in the demo room
 
 -1. Some information we observed
@@ -42,8 +45,8 @@ where:
 - (CV) Detect vehicles' positions (background substraction).   [Done]
 - (CV) Detect red borders/limits of the track	  		[Done]
 - (CV) Detect color of the car using hsv space   [Done with saturation/value thresholding]
-- (CV) Take a picture as the start of the race for default background (better color match)
 - (CV) Partition the track   [Done]
+- (CV) Take a picture as the start of the race for default background (better color match)
 - (CV) Detect curvatures of the track
 
 - (ML) Create a policy function that set the vehicle's speed/lane depending on its position

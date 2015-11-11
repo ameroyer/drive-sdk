@@ -19,7 +19,7 @@
 //=============================================================================
 
 #if defined(WIN32) || defined(WIN64)
-#define _CRT_SECURE_NO_WARNINGS		
+#define _CRT_SECURE_NO_WARNINGS
 #endif
 
 #include "C/FlyCapture2_C.h"
@@ -50,7 +50,13 @@ void intHandler(int dummy) {
 }
 
 // List of discrete states/ centroids
-static std::vector<State> states_list; // List of all possible states
+static std::vector<Centroid> centroids_list; // List of all possible states
+
+
+void init_states_list(char* filename) {
+    return;
+}
+
 
 /**
  * Compute the median image from a sequence of images
@@ -59,7 +65,7 @@ static int nmedian;
 static int nthreads;
 
 // Multithread version
-void* compute_median_subthread(void* aux) { 
+void* compute_median_subthread(void* aux) {
     int indx = *((int*) aux);
     int start = IMAGE_SIZE / nthreads * indx;
     int end = start + IMAGE_SIZE / nthreads;
@@ -73,15 +79,15 @@ void* compute_median_subthread(void* aux) {
 	    pix[i] = input_median[i][j];
 	}
         background->data[j] = quick_select(pix, nmedian);
-    }	    
+    }
 }
 
 void compute_median_multithread(int nfiles, int nthread) {
     fprintf(stderr, "Background update - start\n");
-    nmedian = nfiles; 
+    nmedian = nfiles;
     nthreads = nthread;
-    int i, ret;  
-    pthread_t threads[nthread];  
+    int i, ret;
+    pthread_t threads[nthread];
 
     // Launch threads
     for (i = 0; i < nthread; i++) {
@@ -98,7 +104,7 @@ void compute_median_multithread(int nfiles, int nthread) {
 // One thread version
 void compute_median(int nfiles, unsigned char** array, shared_struct* result) {
 	    fprintf(stderr, "Background update - start\n");
-    int i, j;    
+    int i, j;
     unsigned char pix[nfiles];
     for (j = 0; j < IMAGE_SIZE; j++) {
 	for (i = 0; i < nfiles; i++) {
@@ -127,7 +133,7 @@ void init_blob_detector() {
     params.minArea = 300;
     params.maxArea = 3500;
     detector = cv::SimpleBlobDetector::create(params);
-}    
+}
 
 
 // Return the most likely color name associated to a hue value
@@ -222,11 +228,11 @@ int get_mean_hue(unsigned char* data, int x, int y, int ray) {
 }
 
 // Get discretized state corresponding to a position
-int get_state(float x, float y) {
+int get_centroid(float x, float y) {
     float min_dist = 5000000;
     float d;
     int result;
-    for(std::vector<State>::iterator it = states_list.begin(); it != states_list.end(); ++it) {
+    for(std::vector<Centroid>::iterator it = centroids_list.begin(); it != centroids_list.end(); ++it) {
 	d = it->get_distance_squared(x, y);
 	if (d < min_dist) {
 	    min_dist = d;
@@ -239,7 +245,7 @@ int get_state(float x, float y) {
 // Update the camera location for our car and the other (obstacles)
 void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_color) {
     // Detection
-    Mat im;    
+    Mat im;
     cvtColor(Mat(ppm_height, ppm_width, CV_8UC3, shm->data), im, COLOR_BGR2HSV);
     detector->detect(im, keypoints);
 
@@ -259,17 +265,16 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 	    camera_loc->x = (*it).pt.x;
 	    camera_loc->y = (*it).pt.y;
 	    camera_loc->size = (*it).size;
-	    camera_loc->state = get_state((*it).pt.x, (*it).pt.y);
-
+	    camera_loc->centroid = get_centroid((*it).pt.x, (*it).pt.y);
 	    camera_loc->success = 1;
-	} 
+	}
 	else if (obst < camera_obst->total) {
 	    camera_obst->obst[obst*3] = (*it).pt.x;
 	    camera_obst->obst[obst*3 + 1] = (*it).pt.y;
 	    camera_obst->obst[obst*3 + 2] = (*it).size;
-	    camera_obst->states[obst] = get_state((*it).pt.x, (*it).pt.y);
+	    camera_obst->centroids[obst] = get_centroid((*it).pt.x, (*it).pt.y);
 	}
-    }	
+    }
     camera_obst->found = obst;
     camera_obst->update_time = index;
     camera_loc->update_time = index;
@@ -286,7 +291,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     	cvtColor(im_with_keypoints, im_with_keypoints, COLOR_BGR2RGB);
 	char filename[256];
 	snprintf(filename, 255, "/home/cvml1/Code/Images/KPfc2TestImage%08ld.ppm", shm->count);
-	imwrite(filename,  im_with_keypoints);	
+	imwrite(filename,  im_with_keypoints);
     }
 }
 
@@ -365,10 +370,10 @@ void export_ppm(char* filename, const int width, const int height, shared_struct
     char PPMheader[32];
     snprintf(PPMheader, 31, "P6\n%d %d 255\n", width, height);
     snprintf(filename, 255, "/home/cvml1/Code/Images/fc2TestImage%08ld.ppm", shm->count);
-    FILE *fid = fopen(filename, "wb"); 
+    FILE *fid = fopen(filename, "wb");
     int res = fwrite(PPMheader, strlen(PPMheader), 1, fid);
-    res = fwrite( shm, 1920*1200*3, 1, fid); 
-    fclose(fid);   
+    res = fwrite( shm, 1920*1200*3, 1, fid);
+    fclose(fid);
 }
 
 /**
@@ -376,7 +381,7 @@ void export_ppm(char* filename, const int width, const int height, shared_struct
  */
 void export_txt(char* filename, const int width, const int height, shared_struct* shm) {
     snprintf(filename, 255, "/home/cvml1/Code/Images/fc2TestImage%08ld.txt", shm->count);
-    FILE *fid = fopen(filename, "wb"); 
-    int res = fwrite( shm, 1920*1200*3, 1, fid); 
-    fclose(fid);   
+    FILE *fid = fopen(filename, "wb");
+    int res = fwrite( shm, 1920*1200*3, 1, fid);
+    fclose(fid);
 }

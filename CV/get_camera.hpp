@@ -23,7 +23,7 @@ extern "C" {
     typedef struct camera_localization {
 	float x ;    /// x coordinate
 	float y ;    /// y coordinate
-        int state;  // Index of corresponding discretized state
+        int centroid;  // Index of corresponding discretized state
 	float size; //blob diameter
 	float direction[2]; //Direction vector (ie new position - old position)
 	float speed;
@@ -37,7 +37,7 @@ extern "C" {
      */
     typedef struct camera_obstacles_localization {
 	float obst[5 * 3]; // 5 other cars at most, 3 fields by detected object (x, y, ray)
-        int states[5]; // Corresponding discretized states
+        int centroids[5]; // Corresponding discretized states
 	int update_time ; /// Last update time (is increased every time we get an update from the car)
 	int found;
 	int total;
@@ -55,7 +55,10 @@ extern "C" {
     void compute_median(int nfiles, unsigned char** array, shared_struct* result);
     void compute_median_multithread(int nfiles, int nthread);
 
-
+    /*
+     * Init states list
+     */
+    void init_states_list(char* filename);
     /**
      * Init OpenCV Blob detection
      */
