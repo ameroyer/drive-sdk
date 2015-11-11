@@ -98,7 +98,7 @@ struct arg_struct {
 };
 
 
-// Main function run on the thread
+// Main function run on the camera detection thread
 void* update_camera_loc(void* aux) {
     // Read arguments
     struct arg_struct *args = (struct arg_struct *)aux;
@@ -109,19 +109,16 @@ void* update_camera_loc(void* aux) {
     int bg_update = args->background_update;
     int verbose = args->verbose;
 
-    //Load background
-    background = (shared_struct*) malloc(sizeof(shared_struct));
-    background->count = 0;
-    FILE *f = fopen("/home/cvml1/Code/Images/default_background.txt", "rb");
-    fread(background->data, IMAGE_SIZE, 1, f);
-    fclose(f);
-
-
     //Init structures
     init_blob_detector();
     camera_obst = (camera_obst_localization_t*) malloc(sizeof(camera_obst_localization_t));
-    camera_obst->total = args.n_obst;
+    camera_obst->total = args->n_obst;
     camera_loc = (camera_localization_t*) malloc(sizeof(camera_localization_t));
+    input_median = (unsigned char**) malloc(sizeof(unsigned char*) * bg_history);
+    int i;
+    for (i = 0; i < bg_history; i++) {
+	input_median[i] = (unsigned char*) malloc(sizeof(unsigned char) * IMAGE_SIZE);
+    }
 
     // Init shared memory
     int shmid;
@@ -133,18 +130,20 @@ void* update_camera_loc(void* aux) {
     if ((shmid = shmget(key, sizeof(shared_struct), 0666)) < 0) { perror("shmget"); exit(1); }
     if ((shm = (shared_struct*)shmat(shmid, NULL, 0)) == (shared_struct *) -1) { perror("shmat"); exit(1); }
 
+    // Load background
+    background = (shared_struct*) malloc(sizeof(shared_struct));
+    background->count = 0;
+    FILE *f = fopen("/home/cvml1/Code/Images/default_background.txt", "rb");
+    fread(background->data, IMAGE_SIZE, 1, f);
+    fclose(f);
+    memcpy(background->data, shm->data, IMAGE_SIZE);
+
     // Additional Paramaters
     camera_index = 0;
     char filename[256];
     int next_bg_update = bg_start - bg_history;
     shared_struct* temp = (shared_struct*) malloc(sizeof(shared_struct));
 
-    //Init arrays for saving past images for background computation
-    int i;
-    input_median = (unsigned char**) malloc(sizeof(unsigned char*) * bg_history);
-    for (i = 0; i < bg_history; i++) {
-	input_median[i] = (unsigned char*) malloc(sizeof(unsigned char) * IMAGE_SIZE);
-    }
 
     /*
      * Update location until receiving exit signal
@@ -168,7 +167,7 @@ void* update_camera_loc(void* aux) {
 	// Compute differential image in temp and update location
 	temp->count = camera_index + 1;
 	sub_thres_min(shm, background, temp, 80);
-	get_camera_loc(temp, camera_index, verbose, car_name, nobstacles);
+	get_camera_loc(temp, camera_index, verbose, car_color);
 
 	// If needed, save current image for next background update
 	if (camera_index == next_bg_update) {
@@ -277,7 +276,7 @@ int main(int argc, char *argv[]) {
      * Load thread to update picture every second and process it
      */
     struct arg_struct camera_args = {car_color, 1000 * camera_update, 1000 * background_update, background_start, background_history, opponents, argc > 4};
-    int ret = pthread_create (&camera, 0, update_camera_loc,  &args);
+    int ret = pthread_create (&camera, 0, update_camera_loc,  &camera_args);
 
     /*
      * Control vehicle's behaviour (run until ctrl-c)
@@ -311,7 +310,7 @@ int main(int argc, char *argv[]) {
 
 	// Check direction and perform uturn if false
 	localization_t loc = anki_s_get_localization(h);
-	if(loc.update_time > 0 && !is_still && !loc.is_clockwise){
+	if(loc.update_time > 0 && !loc.is_clockwise){
 	    anki_s_uturn(h);
 	    fprintf(stderr, "U-turn\n");
 	}

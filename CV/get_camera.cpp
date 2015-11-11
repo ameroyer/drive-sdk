@@ -216,8 +216,9 @@ int get_mean_hue(unsigned char* data, int x, int y, int ray) {
 }
 
 // Update the camera location for our car and the other (obstacles)
-void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_name, int nobst) {
+void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_color) {
     Mat im;
+    
     cvtColor(Mat(ppm_height, ppm_width, CV_8UC3, shm->data), im, COLOR_BGR2HSV);
     detector->detect(im, keypoints);
     if (keypoints.size() > 0) {
@@ -226,7 +227,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 	int obst = 0;
 	for (i = 0; i < keypoints.size(); i++) {
 	    h = get_mean_hue(shm->data, (int) keypoints[i].pt.x, (int) keypoints[i].pt.y, (int) (0.5 * keypoints[i].size));
-	    if (camera_obst->total == 0 || !strcmp(get_car_from_hue(h), car_name)) {
+	    if (camera_obst->total == 0 || !strcmp(get_car_from_hue(h), car_color)) {
 		// Update speed
 		camera_loc->direction[0] = (keypoints[i].pt.x - camera_loc-> x);
 		camera_loc->direction[1] = (keypoints[i].pt.y - camera_loc-> y);
