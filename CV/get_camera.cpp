@@ -227,32 +227,30 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     int obst = 0;
     camera_loc->success = 0;
     for(std::vector<KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
-	h = get_mean_hue(shm->data, (int) *it.pt.x, (int) *it.pt.y, (int) (0.5 * *it.size));
+	h = get_mean_hue(shm->data, (int) (*it).pt.x, (int) (*it).pt.y, (int) (0.5 * (*it).size));
 	if (camera_obst->total == 0 || !strcmp(get_car_from_hue(h), car_color)) {
 	    // Update speed and direction
-	    camera_loc->direction[0] = (keypoints[i].pt.x - camera_loc-> x);
-	    camera_loc->direction[1] = (keypoints[i].pt.y - camera_loc-> y);
+	    camera_loc->direction[0] = ((*it).pt.x - camera_loc-> x);
+	    camera_loc->direction[1] = ((*it).pt.y - camera_loc-> y);
 	    camera_loc->speed = 1. / (index - camera_loc->update_time);
 
 	    // Update position
-	    camera_loc->x = keypoints[i].pt.x;
-	    camera_loc->y = keypoints[i].pt.y;
-	    camera_loc->size = keypoints[i].size;
+	    camera_loc->x = (*it).pt.x;
+	    camera_loc->y = (*it).pt.y;
+	    camera_loc->size = (*it).size;
 
 	    // Update additional parameters
 	    camera_loc->success = 1;
-	    success = 1;
 	} 
 	else if (obst < camera_obst->total) {
-	    camera_obst->obst[obst*3] = keypoints[i].pt.x;
-	    camera_obst->obst[obst*3 + 1] = keypoints[i].pt.y;
-	    camera_obst->obst[obst*3 + 2] = keypoints[i].size;
+	    camera_obst->obst[obst*3] = (*it).pt.x;
+	    camera_obst->obst[obst*3 + 1] = (*it).pt.y;
+	    camera_obst->obst[obst*3 + 2] = (*it).size;
 	}
     }	
     camera_obst->found = obst;
-} 
-camera_obst->update_time = index;
-camera_loc->update_time = index;
+    camera_obst->update_time = index;
+    camera_loc->update_time = index;
 
     // Additional verbose output
     if (verbose) {
@@ -263,10 +261,10 @@ camera_loc->update_time = index;
 	}
     	Mat im_with_keypoints = Mat(ppm_height, ppm_width, CV_8UC3, shm->data);
 	drawKeypoints( im_with_keypoints, keypoints, im_with_keypoints, Scalar(255, 0, 0), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+    	cvtColor(im_with_keypoints, im_with_keypoints, COLOR_BGR2RGB);
 	char filename[256];
 	snprintf(filename, 255, "/home/cvml1/Code/Images/KPfc2TestImage%08ld.ppm", shm->count);
-    	cvtColor(im_with_keypoints, im_with_keypoints, COLOR_BGR2RGB);
-	imwrite( filename,  im_with_keypoints );	
+	imwrite(filename,  im_with_keypoints);	
     }
 }
 
