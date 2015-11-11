@@ -12,8 +12,8 @@ TODO LIST - CVML Project
 
 0. I/O management
 -----------------
-- Wait for "connection successful" before inputing new commands [Amelie]
-- Get the vehicle's location as a return variable instead of printed on screen
+- Wait for "connection successful" before inputing new commands [Done]
+- Get the vehicle's location as a return variable instead of printed on screen [Amelie]
 
 
 1. Basic features, using only position (Goal: 1 car, 10 laps, optimize time)

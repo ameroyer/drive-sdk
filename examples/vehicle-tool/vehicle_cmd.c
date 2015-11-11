@@ -59,9 +59,6 @@
 #include <signal.h>
 #include <sys/signalfd.h>
 #include <glib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -75,7 +72,6 @@
 #include "display.h"
 
 #include <ankidrive.h>
-#include <pthread.h>
 
 static GIOChannel *iochannel = NULL;
 static GAttrib *attrib = NULL;
@@ -983,6 +979,7 @@ static void parse_line(char *line_read)
 	char **argvp;
 	int argcp;
 	int i;
+
 	if (line_read == NULL) {
 		rl_printf("\n");
 		cmd_exit(0, NULL);
@@ -1183,68 +1180,6 @@ int interactive(const char *src, const char *dst,
 	g_free(opt_src);
 	g_free(opt_dst);
 	g_free(opt_sec_level);
-	return 0;
-}
-
-
-
-void send_command(char* pipe, char* command) {
-        FILE* tempfile = fopen(pipe, "a");
-        fprintf(tempfile, "%s\n", command);
-	fclose(tempfile);
-	int i;
-	for (i = 0; i <= strlen(command); i++) {
-	  rl_callback_read_char();
-	  }
-}
-
-
-
-int interactive_from_file(const char *src, const char *dst,
-			  const char *dst_type, int psm, char* pipe, int* start)
-{
-	guint input;
-	guint signal;
-
-	// Init
-	opt_sec_level = g_strdup("low");
-	opt_src = g_strdup(src);
-	opt_dst = g_strdup(dst);
-	opt_dst_type = g_strdup(dst_type);
-	opt_psm = psm;
-	prompt = g_string_new(NULL);
-
-	event_loop = g_main_loop_new(NULL, FALSE);
-
-	// Init input channel
-	FILE* tempfile = fopen(pipe, "r");
-	GIOChannel * channel;
-	channel = g_io_channel_unix_new(fileno(tempfile));
-	g_io_channel_unref(channel);
-	signal = setup_signalfd();
-
-	// Set readline input to given pipe
-	rl_instream = tempfile;
-	rl_attempted_completion_function = commands_completion;
-	rl_erase_empty_line = 1;
-	rl_callback_handler_install(get_prompt(), parse_line);
-	
-
-	// Run main loop
-	*start = 1;
-	g_main_loop_run(event_loop);
-
-	// Exit and clean
-	rl_callback_handler_remove();
-	cmd_disconnect(0, NULL);
-	g_source_remove(signal);
-	g_main_loop_unref(event_loop);
-	g_string_free(prompt, TRUE);
-
-	g_free(opt_src);
-	g_free(opt_dst);
-	g_free(opt_sec_level);
-	fclose(tempfile);
 
 	return 0;
 }
