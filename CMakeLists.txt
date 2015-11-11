@@ -43,7 +43,6 @@ if (BUILD_PROJECT)
     /usr/include/flycapture
     )
   set(Project_SOURCES
-    examples/simple-c-interface/anki-simplified.h
     examples/simple-c-interface/anki-simplified.c
     CV/quickselect.c
     CV/get_camera.cpp
