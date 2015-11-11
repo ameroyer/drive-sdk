@@ -43,11 +43,12 @@ if (BUILD_PROJECT)
     /usr/include/flycapture
     )
   set(Project_SOURCES
+    examples/simple-c-interface/anki-simplified.h
     examples/simple-c-interface/anki-simplified.c
     CV/quickselect.c
     CV/get_camera.cpp
     )
-  add_executable(main main.c ${Project_SOURCES})
+  add_executable(main main.cpp ${Project_SOURCES})
   
   find_package( OpenCV REQUIRED )
   target_link_libraries(main

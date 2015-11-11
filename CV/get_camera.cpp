@@ -216,7 +216,7 @@ int get_mean_hue(unsigned char* data, int x, int y, int ray) {
 }
 
 // Update the camera location for our car and the other (obstacles)
-void get_camera_loc(shared_struct* shm, int index, int verbose, char* car_name, int nobst) {
+void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_name, int nobst) {
     Mat im;
     cvtColor(Mat(ppm_height, ppm_width, CV_8UC3, shm->data), im, COLOR_BGR2HSV);
     detector->detect(im, keypoints);
