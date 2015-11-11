@@ -324,6 +324,17 @@ static int sdk_mode(handle_t* h,int mode)
   return 1;
 }
 
+static int get_localization_position_update(handle_t* h)
+{
+  if (!check_connected(h))  return 0;
+  int handle = h->vehicle.write_char.value_handle;
+
+  anki_vehicle_msg_t msg;
+  size_t plen = anki_vehicle_msg_get_localization_position_update(&msg);
+  gatt_write_char(h->attrib, handle, (uint8_t *)&msg, plen, NULL, NULL);
+  return 1;
+}
+
 
 static void *event_loop_thread(gpointer data) {
   handle_t* h = (handle_t*)data;
