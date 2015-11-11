@@ -70,7 +70,6 @@ int anki_s_cancel_lane_change(AnkiHandle handle);
 
 /** returns 1 if connected and 0 if not*/
 int anki_s_is_connected(AnkiHandle handle);
-int anki_s_is_sdk_ctrl_mode(AnkiHandle ankihandle);
 
 /** returns the last self-localization of the car
     @return locatization struct

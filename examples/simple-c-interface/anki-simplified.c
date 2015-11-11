@@ -92,8 +92,6 @@ typedef struct handle {
   int verbose;
 } handle_t;
 
-static int is_sdk_ctrl_mode = 0;
-
 static void discover_services(handle_t* h);
 
 #define error(fmt, arg...)                      \
@@ -312,25 +310,11 @@ static void disconnect(handle_t* h)
 
 static int sdk_mode(handle_t* h,int mode)
 {
-    
-    if(h->verbose) printf("set sdk mode");
   if (!check_connected(h))  return 0;
 
   int handle = h->vehicle.write_char.value_handle;
   anki_vehicle_msg_t msg;
   size_t plen = anki_vehicle_msg_set_sdk_mode(&msg, mode, ANKI_VEHICLE_SDK_OPTION_OVERRIDE_LOCALIZATION);
-  gatt_write_char(h->attrib, handle, (uint8_t *)&msg, plen, NULL, NULL);
-  is_sdk_ctrl_mode = 1;
-  return 1;
-}
-
-static int get_localization_position_update(handle_t* h)
-{
-  if (!check_connected(h))  return 0;
-  int handle = h->vehicle.write_char.value_handle;
-
-  anki_vehicle_msg_t msg;
-  size_t plen = anki_vehicle_msg_get_localization_position_update(&msg);
   gatt_write_char(h->attrib, handle, (uint8_t *)&msg, plen, NULL, NULL);
   return 1;
 }
@@ -350,13 +334,6 @@ int anki_s_is_connected(AnkiHandle ankihandle){
   return (h && h->conn_state == STATE_CONNECTED);
 }
 
-
-int anki_s_is_sdk_ctrl_mode(AnkiHandle ankihandle){
-  handle_t* h = (handle_t*)ankihandle;
-  return (h && is_sdk_ctrl_mode);
-}
-
-
 int anki_s_uturn(AnkiHandle ankihandle)
 {
   handle_t* h = (handle_t*)ankihandle;
@@ -367,8 +344,8 @@ int anki_s_uturn(AnkiHandle ankihandle)
   anki_vehicle_msg_t msg;
   size_t plen = anki_vehicle_msg_turn_180(&msg);
   gatt_write_char(h->attrib, handle, (uint8_t *)&msg, plen, NULL, NULL);
-  //Update loc immediately if successful
-  h->loc.is_clockwise = 1 - h->loc.is_clockwise;
+  //Make clockwise change immediate
+  h->loc.is_clockwise = 1 - h->loc.is_clockwise;  
   return 0;
 }
 
@@ -494,3 +471,4 @@ void anki_s_close(AnkiHandle ankihandle){
   g_main_loop_unref(h->event_loop);
   free(h);
 }
+

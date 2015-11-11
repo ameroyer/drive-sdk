@@ -4,7 +4,6 @@ TODO LIST - CVML Project (Rho)
 
 Next Week
 ---------
-- (TODO) Update the Github
 - (TODO) Create optimal deterministic policy for one car
 - (TODO) Start the Machine Learning process
 - Meet in the demo room

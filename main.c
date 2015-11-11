@@ -276,7 +276,6 @@ int main(int argc, char *argv[]) {
     // Init bluethooth and wait for connection successful
     fprintf(stderr, "Attempting connection to %s\n", car_id);
     h = anki_s_init(adapter, car_id, argc>4);
-    while(!anki_s_is_connected(h) || !anki_s_is_sdk_ctrl_mode(h));
     fprintf(stderr, "Connection successful\n");
 
     // Additional parameters
