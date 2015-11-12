@@ -67,7 +67,7 @@
 #include <bzle/gatt/utils.h>
 #include <ankidrive.h>
 
-#include "anki-simplified.h"
+#include <anki-simplified.h>
 
 typedef struct anki_vehicle {
   struct gatt_char read_char;
@@ -344,8 +344,6 @@ int anki_s_uturn(AnkiHandle ankihandle)
   anki_vehicle_msg_t msg;
   size_t plen = anki_vehicle_msg_turn_180(&msg);
   gatt_write_char(h->attrib, handle, (uint8_t *)&msg, plen, NULL, NULL);
-  //Make clockwise change immediate
-  h->loc.is_clockwise = 1 - h->loc.is_clockwise;  
   return 0;
 }
 
@@ -471,4 +469,3 @@ void anki_s_close(AnkiHandle ankihandle){
   g_main_loop_unref(h->event_loop);
   free(h);
 }
-

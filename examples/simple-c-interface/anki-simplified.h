@@ -23,10 +23,6 @@
 #ifndef ANKI_SIMPLIFIED_H
 #define ANKI_SIMPLIFIED_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
    Self-localization information
 */
@@ -79,10 +75,5 @@ int anki_s_is_connected(AnkiHandle handle);
     @return locatization struct
  */
 localization_t anki_s_get_localization(AnkiHandle handle);
-
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
