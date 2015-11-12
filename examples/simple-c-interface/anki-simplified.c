@@ -67,7 +67,7 @@
 #include <bzle/gatt/utils.h>
 #include <ankidrive.h>
 
-#include <anki-simplified.h>
+#include "anki-simplified.h"
 
 typedef struct anki_vehicle {
   struct gatt_char read_char;
@@ -88,9 +88,11 @@ typedef struct handle {
     STATE_CONNECTING,
     STATE_CONNECTED
   } conn_state;
-  int is_ready;
+
   int verbose;
 } handle_t;
+
+static int is_sdk_ctrl_mode = 0;
 
 static void discover_services(handle_t* h);
 
@@ -126,27 +128,8 @@ static void handle_vehicle_msg_response(handle_t* h, const uint8_t *data, uint16
       h->loc.segm=m->_reserved[1];
       h->loc.subsegm=m->_reserved[0];
       h->loc.is_clockwise=m->is_clockwise;
-      h->loc.num_uncounted_transitions=0;
-      h->loc.is_delocalized=0;
       break;
     }
-  case ANKI_VEHICLE_MSG_V2C_LOCALIZATION_TRANSITION_UPDATE:
-    {
-      const anki_vehicle_msg_localization_transition_update_t *m = (const anki_vehicle_msg_localization_transition_update_t *)msg;
-      h->loc.num_uncounted_transitions++;
-      h->loc.is_delocalized=0;
-      break;
-    }
-  case ANKI_VEHICLE_MSG_V2C_IS_READY:
-    if(h->verbose) printf("Car READY\n");
-    h->is_ready=1;
-    break;
-  case ANKI_VEHICLE_MSG_V2C_VEHICLE_DELOCALIZED:
-    h->loc.update_time++;
-    h->loc.segm=0;
-    h->loc.subsegm=0;
-    h->loc.is_delocalized=1;
-    break;
   default:
     // printf("Received unhandled vehicle message of type 0x%02x\n", msg->msg_id);
     break;
@@ -187,7 +170,7 @@ static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
   g_attrib_register(h->attrib, ATT_OP_HANDLE_IND, GATTRIB_ALL_HANDLES,
                     events_handler, h, NULL);
   h->conn_state=STATE_CONNECTED;
-  if(h->verbose) printf("Connection successful, waiting for vehicle to become ready\n");
+  if(h->verbose) printf("Connection successful\n");
 
   discover_services(h);
 }
@@ -310,11 +293,25 @@ static void disconnect(handle_t* h)
 
 static int sdk_mode(handle_t* h,int mode)
 {
+    
+    if(h->verbose) printf("set sdk mode");
   if (!check_connected(h))  return 0;
 
   int handle = h->vehicle.write_char.value_handle;
   anki_vehicle_msg_t msg;
   size_t plen = anki_vehicle_msg_set_sdk_mode(&msg, mode, ANKI_VEHICLE_SDK_OPTION_OVERRIDE_LOCALIZATION);
+  gatt_write_char(h->attrib, handle, (uint8_t *)&msg, plen, NULL, NULL);
+  is_sdk_ctrl_mode = 1;
+  return 1;
+}
+
+static int get_localization_position_update(handle_t* h)
+{
+  if (!check_connected(h))  return 0;
+  int handle = h->vehicle.write_char.value_handle;
+
+  anki_vehicle_msg_t msg;
+  size_t plen = anki_vehicle_msg_get_localization_position_update(&msg);
   gatt_write_char(h->attrib, handle, (uint8_t *)&msg, plen, NULL, NULL);
   return 1;
 }
@@ -333,6 +330,13 @@ int anki_s_is_connected(AnkiHandle ankihandle){
   handle_t* h = (handle_t*)ankihandle;
   return (h && h->conn_state == STATE_CONNECTED);
 }
+
+
+int anki_s_is_sdk_ctrl_mode(AnkiHandle ankihandle){
+  handle_t* h = (handle_t*)ankihandle;
+  return (h && is_sdk_ctrl_mode);
+}
+
 
 int anki_s_uturn(AnkiHandle ankihandle)
 {
@@ -382,20 +386,6 @@ int anki_s_change_lane(AnkiHandle ankihandle, int relative_offset, int h_speed, 
   return 0;
 }
 
-int anki_s_cancel_lane_change(AnkiHandle ankihandle)
-{
-  handle_t* h = (handle_t*)ankihandle;
-  if (!check_connected(h))  return 1;
-
-  int handle = h->vehicle.write_char.value_handle;
-  if(h->verbose) printf("cancel changing lane\n");
-
-  anki_vehicle_msg_t clane_msg;
-  size_t clane_plen = anki_vehicle_msg_cancel_lane_change(&clane_msg);
-  gatt_write_char(h->attrib, handle, (uint8_t*)&clane_msg, clane_plen, NULL, NULL);
-  return 0;
-}
-
 localization_t anki_s_get_localization(AnkiHandle ankihandle){
   handle_t* h = (handle_t*)ankihandle;
   if (!check_connected(h)) {
@@ -416,9 +406,8 @@ AnkiHandle anki_s_init(const char *src, const char *dst, int _verbose){
   h->loc.subsegm      = 0;
   h->loc.is_clockwise = 0;
   h->loc.update_time  = 0;
-  h->loc.num_uncounted_transitions = 0;
   h->conn_state       = STATE_DISCONNECTED;
-  h->is_ready         = 0;
+
   if (dst == NULL) {
     error("Remote Bluetooth address required\n");
     return NULL;
@@ -441,19 +430,12 @@ AnkiHandle anki_s_init(const char *src, const char *dst, int _verbose){
   } else
     g_io_add_watch(h->iochannel, G_IO_HUP, channel_watcher, h);
 
-  // check for connected callback and car beeing ready
-  int max_wait=50;
-  while(h->is_ready == 0 && max_wait>0){
-    g_usleep(G_USEC_PER_SEC/10);
-    max_wait--;
-  }
-  if(h->is_ready == 0) {
-    error("could not connect to car\n");
-    return NULL;
-  }
-
+  g_usleep(G_USEC_PER_SEC);
   // set sdk mode
   sdk_mode(h,1);
+
+  // enable localization update
+  get_localization_position_update(h);
 
   return h;
 }
@@ -469,3 +451,4 @@ void anki_s_close(AnkiHandle ankihandle){
   g_main_loop_unref(h->event_loop);
   free(h);
 }
+  

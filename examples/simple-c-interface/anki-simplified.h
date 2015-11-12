@@ -31,8 +31,6 @@ typedef struct localization {
   int subsegm ;    ///< Lane and/or subpiece information? (between 0-255)
   int is_clockwise; ///< direction of driving (0: ccw, 1: cw)
   int update_time ; ///< Last update time (is increased every time we get an update from the car)
-  int num_uncounted_transitions ; ///< number of segment transitions where we did not get a localization yet
-  int is_delocalized ; ///< if 1 the car lost the track
 } localization_t;
 
 typedef void* AnkiHandle;
@@ -63,13 +61,9 @@ int anki_s_uturn(AnkiHandle handle);
  */
 int anki_s_change_lane(AnkiHandle handle, int relative_offset, int h_speed, int h_accel);
 
-/** cancels last change command
-    @return 0 for okay, 1 for failure
- */
-int anki_s_cancel_lane_change(AnkiHandle handle);
-
 /** returns 1 if connected and 0 if not*/
 int anki_s_is_connected(AnkiHandle handle);
+int anki_s_is_sdk_ctrl_mode(AnkiHandle ankihandle);
 
 /** returns the last self-localization of the car
     @return locatization struct
