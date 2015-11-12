@@ -5,7 +5,6 @@
 extern "C" {
 #endif
 
-
     /**
      * Camera image type
      */
@@ -22,6 +21,7 @@ extern "C" {
     typedef struct camera_localization {
 	float x ;    /// x coordinate
 	float y ;    /// y coordinate
+        int centroid;  // Index of corresponding discretized state
 	float size; //blob diameter
 	float direction[2]; //Direction vector (ie new position - old position)
 	float speed;
@@ -35,6 +35,7 @@ extern "C" {
      */
     typedef struct camera_obstacles_localization {
 	float obst[5 * 3]; // 5 other cars at most, 3 fields by detected object (x, y, ray)
+        int centroids[5]; // Corresponding discretized states
 	int update_time ; /// Last update time (is increased every time we get an update from the car)
 	int found;
 	int total;
@@ -52,7 +53,10 @@ extern "C" {
     void compute_median(int nfiles, unsigned char** array, shared_struct* result);
     void compute_median_multithread(int nfiles, int nthread);
 
-
+    /*
+     * Init states list
+     */
+    void init_states_list(char* filename);
     /**
      * Init OpenCV Blob detection
      */
@@ -61,7 +65,7 @@ extern "C" {
     /**
      * Return locations of object detected on the camera image
      */
-    void get_camera_loc(shared_struct* shm, int index, int verbose, char* car_name, int nobst);
+    void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_color);
     void get_camera_lock_dead_reckon(int time, float result[2]);
 
     /**
@@ -95,3 +99,4 @@ extern "C" {
 #endif
 
 #endif
+
