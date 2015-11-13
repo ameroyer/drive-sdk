@@ -27,7 +27,6 @@ private:
 class State {
 public:
     State(float x, float y, int id);
-	Centroid get_car(){return car;}
 
 private:
     Centroid car;
@@ -75,7 +74,7 @@ class Policy {
 // Here create the deterministic polycy for one car
 class DetOneCarPolicy: public Policy {
  public:
-    Action get_next_action(State s) { return ActionLane(0,0,0);}; //TODO
+    Action get_next_action(State s) {return ActionLane(0,0,0);}; //TODO
 };
 
 

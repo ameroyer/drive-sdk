@@ -6,6 +6,7 @@
 
 #include "examples/simple-c-interface/anki-simplified.h"
 #include "CV/get_camera.hpp"
+#include "ML/policies.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -291,7 +292,7 @@ int main(int argc, char *argv[]) {
     // Additional parameters
     run_index = 0;
     int res;
-    float epsilon = 0.05;
+	float epsilon = 0.05;
     float previous_camera_loc[2] = {camera_loc->x, camera_loc->y};
     int previous_centroid = camera_loc->centroid;
     struct timeval lapstarttime, lapfinishtime;
@@ -300,7 +301,7 @@ int main(int argc, char *argv[]) {
     localization_t loc;
 
     // Start Run until ctrl-C
-    res = anki_s_set_speed(h,800,20000);
+    res = anki_s_set_speed(h,400,20000);
     while (kbint && !res) {
 	// Display
 	print_loc(h);
@@ -319,21 +320,21 @@ int main(int argc, char *argv[]) {
 		printf("lap time: %.3f\n\n",(laptime));
 		
 	}
-
 	// Check direction and perform uturn if false
 	loc = anki_s_get_localization(h);
 	if(loc.update_time > 0 && !loc.is_clockwise){
-	    anki_s_uturn(h);		
+	    anki_s_uturn(h);	
+	    fprintf(stderr, "U-turn\n");	
 	}
-
+	
 	// Check if car stands still (no update of loc information) and set speed randomly  if so
-	if(loc.update_time > 0 && camera_loc->success && camera_index > background_update && abs(previous_camera_loc[0] - camera_loc->x) < epsilon && abs(previous_camera_loc[1] - camera_loc->y) < epsilon){
+	if(camera_loc->success && abs(previous_camera_loc[0] - camera_loc->x) < epsilon && abs(previous_camera_loc[1] - camera_loc->y) < epsilon){
 	    anki_s_set_speed(h,500 + 1000 * ((double) rand() / (RAND_MAX)), 20000);
 	    fprintf(stderr, "Still\n");
 	}
-	
+
 	// Check current action
-	//apply_policy(h, state)
+	apply_policy(h, *camera_loc);
 
 	// Next loop
 	run_index += 1;

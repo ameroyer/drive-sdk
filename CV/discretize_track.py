@@ -193,10 +193,10 @@ if __name__ == "__main__":
 
 
     # Find the horizontal segments and compute the parts centroids
-    parts = []
-    centroids = []
+    parts = [0 * (len(vsegments) - 1) * dv] # Parts is the list of parts in the track. Each items contaisn fields "contours", "centroid", "vertical segment id", horizontal segment id" (lane) and if it is the starting lane or not.
     previous = [0] * (dv + 1)
     first = [0] * (dv + 1)
+    startline = 0
     vsegments.append(vsegments[0])
     for i, (x1, y1, xin1, yin1) in enumerate(vsegments):
         d = dist(x1, y1, xin1, yin1)

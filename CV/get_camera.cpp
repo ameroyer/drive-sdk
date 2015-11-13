@@ -35,10 +35,10 @@
 #include "get_camera.hpp"
 #include <pthread.h>
 #include <math.h>
-#include "../ML/state.hpp"
 #include <fstream>
 #include <sstream>
 #include <string>
+#include "init_centroids.hpp"
 
 using namespace cv;
 
@@ -53,7 +53,7 @@ void intHandler(int dummy) {
 }
 
 // List of discrete states/ centroids
-static std::vector<Centroid> centroids_list; // List of all possible states
+//static std::vector<Centroid> centroids_list; // List of all possible states
 
 //TODO:extract more info
 void init_centroids_list(char* filename) {
