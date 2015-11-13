@@ -47,6 +47,7 @@ if (BUILD_PROJECT)
     examples/simple-c-interface/anki-simplified.c
     ML/state.hpp
     ML/state.cpp
+    ML/policies.cpp
     CV/quickselect.c
     CV/get_camera.cpp
     )

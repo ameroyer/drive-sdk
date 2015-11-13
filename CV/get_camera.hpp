@@ -56,7 +56,7 @@ extern "C" {
     /*
      * Init states list
      */
-    void init_states_list(char* filename);
+    void init_centroids_list(char* filename);
     /**
      * Init OpenCV Blob detection
      */

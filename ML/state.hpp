@@ -6,8 +6,13 @@ class Centroid {
 public:
     Centroid(int id_, float x_, float y_, int straight_, int lane_) {id = id_; x = x_; y = y_; straight = straight_; lane = lane_; };
     int get_id() { return id;};
+    float get_x() {return x;};
+    float get_y() {return y;};
 
     float get_distance_squared(float a, float b);
+    
+    
+    
 
 private:
     int id;
@@ -22,6 +27,7 @@ private:
 class State {
 public:
     State(float x, float y, int id);
+	Centroid get_car(){return car;}
 
 private:
     Centroid car;
@@ -34,8 +40,7 @@ private:
 // Define a class for actions
 class Action {
 public:
-    Action();
-    virtual void apply(AnkiHandle h);
+    void apply(AnkiHandle h) {return;};
 };
 
 
@@ -63,16 +68,14 @@ public:
 // Define a virtualclass for policies
 class Policy {
  public:
-    Policy();
-    virtual Action get_next_action(State s);
+    Action get_next_action(State s) {return Action();};
 };
 
 
 // Here create the deterministic polycy for one car
 class DetOneCarPolicy: public Policy {
  public:
-    DetOneCarPolicy();
-    Action get_next_action(State s); //TODO
+    Action get_next_action(State s) { return ActionLane(0,0,0);}; //TODO
 };
 
 

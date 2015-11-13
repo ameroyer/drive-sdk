@@ -70,8 +70,8 @@ void print_loc(AnkiHandle h){
  */
 void print_camera_loc(){
     if (camera_loc->success) {
-	printf(KBOLD KGRN "[Camera location]" RESET " x: %.2f y: %.2f size: %.2f last-update: %i\n",
-	       camera_loc->x, camera_loc->y, camera_loc->size, camera_loc->update_time);
+	printf(KBOLD KGRN "[Camera location]" RESET " centroid: %d x: %.2f y: %.2f size: %.2f last-update: %i\n",
+	       camera_loc->centroid,camera_loc->x, camera_loc->y, camera_loc->size, camera_loc->update_time);
     } else {
 	float result[2];
 	get_camera_lock_dead_reckon(camera_index, result);
@@ -108,7 +108,7 @@ void* update_camera_loc(void* aux) {
 
     //Init structures
     init_blob_detector();
-    //init_states_list("CV/centroids_h100_v3");
+    init_centroids_list("CV/centroids_h100_v3");
     camera_obst = (camera_obst_localization_t*) malloc(sizeof(camera_obst_localization_t));
     camera_obst->total = args->n_obst;
     camera_loc = (camera_localization_t*) malloc(sizeof(camera_localization_t));
@@ -284,37 +284,62 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Attempting connection to %s\n", car_id);
     h = anki_s_init(adapter, car_id, argc>4);
     fprintf(stderr, "Connection successful\n");
+    
+    // Initialize a policy 
+    init_det_one_car_policy();
 
     // Additional parameters
     run_index = 0;
     int res;
+    float epsilon = 0.05;
     float previous_camera_loc[2] = {camera_loc->x, camera_loc->y};
+    int previous_centroid = camera_loc->centroid;
+    struct timeval lapstarttime, lapfinishtime;
+    float laptime=-1.;
+    gettimeofday(&lapstarttime,NULL);
+    localization_t loc;
 
     // Start Run until ctrl-C
-    res = anki_s_set_speed(h,600,20000);
+    res = anki_s_set_speed(h,800,20000);
     while (kbint && !res) {
 	// Display
 	print_loc(h);
 	print_camera_loc();
 	printf("\n");
-
-	// Check if car stands still (no update of loc information) and set speed randomly  if so
-	if(camera_loc->success && previous_camera_loc[0] == camera_loc->x && previous_camera_loc[1] == camera_loc->y){
-	    anki_s_set_speed(h,500 + 1000 * ((double) rand() / (RAND_MAX)), 20000);
-	    fprintf(stderr, "Still\n");
+	
+	// Check if lap finished, TODO: parameters from min,maxid of centroids
+	if(camera_loc->centroid>90&&previous_centroid<20)
+	{
+		gettimeofday(&lapfinishtime,NULL);
+		
+		laptime = (lapfinishtime.tv_sec - lapstarttime.tv_sec); 
+		laptime += (lapfinishtime.tv_usec - lapstarttime.tv_usec) / 1000000.;
+		lapstarttime=lapfinishtime;
+		printf("Lap finished! :-)\n");
+		printf("lap time: %.3f\n\n",(laptime));
+		
 	}
 
 	// Check direction and perform uturn if false
-	localization_t loc = anki_s_get_localization(h);
+	loc = anki_s_get_localization(h);
 	if(loc.update_time > 0 && !loc.is_clockwise){
-	    anki_s_uturn(h);
-	    fprintf(stderr, "U-turn\n");
+	    anki_s_uturn(h);		
 	}
+
+	// Check if car stands still (no update of loc information) and set speed randomly  if so
+	if(loc.update_time > 0 && camera_loc->success && camera_index > background_update && abs(previous_camera_loc[0] - camera_loc->x) < epsilon && abs(previous_camera_loc[1] - camera_loc->y) < epsilon){
+	    anki_s_set_speed(h,500 + 1000 * ((double) rand() / (RAND_MAX)), 20000);
+	    fprintf(stderr, "Still\n");
+	}
+	
+	// Check current action
+	//apply_policy(h, state)
 
 	// Next loop
 	run_index += 1;
 	previous_camera_loc[0] = camera_loc->x;
 	previous_camera_loc[1] = camera_loc->y;
+	previous_centroid = camera_loc->centroid;
 	usleep(control_update * 1000000);
     }
 

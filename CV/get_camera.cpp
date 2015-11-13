@@ -36,6 +36,9 @@
 #include <pthread.h>
 #include <math.h>
 #include "../ML/state.hpp"
+#include <fstream>
+#include <sstream>
+#include <string>
 
 using namespace cv;
 
@@ -52,8 +55,23 @@ void intHandler(int dummy) {
 // List of discrete states/ centroids
 static std::vector<Centroid> centroids_list; // List of all possible states
 
+//TODO:extract more info
+void init_centroids_list(char* filename) {
+	
+	std::ifstream infile(filename);
+	std::string line;
+	int i=0;
+	while (std::getline(infile, line))
+	{
+		i++;
+		std::istringstream iss(line);
+		float a, b;
+		if (!(iss >> a >> b)) { break; } 
+		Centroid cent(i,a,b,0,0);
+		centroids_list.push_back(cent);
 
-void init_states_list(char* filename) {
+		printf ("centroid %d: (%f, %f) \n",cent.get_id(),cent.get_x(),cent.get_y());
+	}
     return;
 }
 
@@ -255,7 +273,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     camera_loc->success = 0;
     for(std::vector<KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
 	h = get_mean_hue(shm->data, (int) (*it).pt.x, (int) (*it).pt.y, (int) (0.5 * (*it).size));
-	if (camera_obst->total == 0 || !strcmp(get_car_from_hue(h), car_color)) {
+	if (!strcmp(get_car_from_hue(h), car_color)) {
 	    // Update speed and direction
 	    camera_loc->direction[0] = ((*it).pt.x - camera_loc-> x);
 	    camera_loc->direction[1] = ((*it).pt.y - camera_loc-> y);

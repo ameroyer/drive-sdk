@@ -5,6 +5,7 @@ TODO LIST - CVML Project (Rho)
 Next Week
 ---------
 - (TODO) Update the Github
+- Laptime function [Done (for this track)]
 - (TODO) Create optimal deterministic policy for one car
 - (TODO) Start the Machine Learning process
 - Meet in the demo room
