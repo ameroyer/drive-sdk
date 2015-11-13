@@ -60,17 +60,18 @@ void init_centroids_list(char* filename) {
 	
 	std::ifstream infile(filename);
 	std::string line;
-	int i=0;
+	int id=0;
 	while (std::getline(infile, line))
 	{
-		i++;
 		std::istringstream iss(line);
-		float a, b;
-		if (!(iss >> a >> b)) { break; } 
-		Centroid cent(i,a,b,0,0);
+		float x, y, c;
+		int i, j, s;
+		if (!(iss >> x >> y >> i >> j >> c >> s)) { break; } 
+		Centroid cent(id, x, y, 1. - c, i, j, s);
 		centroids_list.push_back(cent);
+		id++;
 
-		printf ("centroid %d: (%f, %f) \n",cent.get_id(),cent.get_x(),cent.get_y());
+		printf ("centroid %d: (%f, %f) curv: %f, start: %d, lane: %d \n",cent.get_id(),cent.get_x(),cent.get_y(), cent.get_stra(), cent.get_start(), cent.get_lane());
 	}
     return;
 }

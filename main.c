@@ -109,10 +109,11 @@ void* update_camera_loc(void* aux) {
 
     //Init structures
     init_blob_detector();
-    init_centroids_list("CV/centroids_h100_v3");
+    init_centroids_list("CV/centroids_h100_v3.txt");
     camera_obst = (camera_obst_localization_t*) malloc(sizeof(camera_obst_localization_t));
     camera_obst->total = args->n_obst;
     camera_loc = (camera_localization_t*) malloc(sizeof(camera_localization_t));
+	camera_loc->centroid=-1;
     input_median = (unsigned char**) malloc(sizeof(unsigned char*) * bg_history);
     int i;
     for (i = 0; i < bg_history; i++) {

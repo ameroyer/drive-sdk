@@ -4,10 +4,14 @@
 //TODO: replace State by centroids
 class Centroid {
 public:
-    Centroid(int id_, float x_, float y_, int straight_, int lane_) {id = id_; x = x_; y = y_; straight = straight_; lane = lane_; };
+    Centroid(){};
+    Centroid(int id_, float x_, float y_, float straight_, int vseg_, int lane_, int startline_) {id = id_; x = x_; y = y_; straight = straight_; vseg=vseg_; startline=startline_; lane = lane_; };
     int get_id() { return id;};
     float get_x() {return x;};
     float get_y() {return y;};
+    int get_start() { return startline;};
+    int get_lane() { return lane;};
+    float get_stra() { return straight;};
 
     float get_distance_squared(float a, float b);
     
@@ -16,7 +20,9 @@ public:
 
 private:
     int id;
-    int straight; //if 1 then the state is in a straight part of the track, if curve then 0
+    float straight; //if 1 then the state is in a straight part of the track, if curve then 0
+    int vseg;
+    int startline;
     int lane; // current lane (only 3 in the descritzed state space)
     float x;
     float y;
@@ -27,6 +33,8 @@ private:
 class State {
 public:
     State(float x, float y, int id);
+	State(Centroid car_,float speed_) {car=car_; speed=speed_;}
+	Centroid get_car(){return car;}
 
 private:
     Centroid car;
@@ -74,7 +82,12 @@ class Policy {
 // Here create the deterministic polycy for one car
 class DetOneCarPolicy: public Policy {
  public:
-    Action get_next_action(State s) {return ActionLane(0,0,0);}; //TODO
+    Action get_next_action(State s) {
+		int centid=s.get_car().get_id();
+		int speed1=1000;
+		if(centid>50){speed1=200;}
+		return ActionSpeed(speed1,2000);
+	}; //TODO
 };
 
 

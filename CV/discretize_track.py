@@ -238,13 +238,12 @@ if __name__ == "__main__":
             previous[j] = (p, q)
 
     # Set startline
-    print startline
     for x in centroids:
         if x[1] == startline:
             x[-1] = 1
 
     # Save
-    with open("Acentroids_h%d_v%d.txt" %(dh, dv), "w") as f:
-        f.write("\n".join("%f %f\t%d\t%d\t%f\t%d" %(ctr[0], ctr[1], i, j, curv, start) for ctr, i, j, curv, start in centroids))
+    with open("centroids_h%d_v%d.txt" %(dh, dv), "w") as f:
+        f.write("\n".join("%f %f %d %d %f %d" %(ctr[0], ctr[1], i, j, curv, start) for ctr, i, j, curv, start in centroids))
     import Image
     Image.fromarray(mask).save("discretized_track_h%d_v%d.png" %(dh, dv))
