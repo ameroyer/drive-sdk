@@ -39,6 +39,16 @@ def scalar(x1, y1, x2, y2):
     """
     return x1 * x2 + y1 * y2
 
+def get_cosine(x1, y1, x2, y2):
+    return scalar(x1, y1, x2, y2) / (dist(0, 0, x1, y1) * dist(0, 0, x2, y2))
+
+
+def get_curvature(x1, y1, x2, y2):
+    c1 = get_cosine(abs(x2 - x1), abs(y2 - y1), 0, 1);
+    c2 = get_cosine(abs(x2 - x1), abs(y2 - y1), 1, 0);
+    return min(c1, c2);
+
+
 def get_cnt_bounding_box(cnt, width=1920, height=720):
     """
     Give a contour (list of points), return its bounding box
@@ -193,10 +203,12 @@ if __name__ == "__main__":
 
 
     # Find the horizontal segments and compute the parts centroids
-    parts = [0 * (len(vsegments) - 1) * dv] # Parts is the list of parts in the track. Each items contaisn fields "contours", "centroid", "vertical segment id", horizontal segment id" (lane) and if it is the starting lane or not.
+    centroids = []
     previous = [0] * (dv + 1)
     first = [0] * (dv + 1)
     startline = 0
+    startline_pixel = (855, 164)
+    closest = 100000
     vsegments.append(vsegments[0])
     for i, (x1, y1, xin1, yin1) in enumerate(vsegments):
         d = dist(x1, y1, xin1, yin1)
@@ -213,16 +225,26 @@ if __name__ == "__main__":
                 first[j] = (p, q)
             else:
                 cv2.line(mask, (int(p), int(q)), (int(previous[j][0]), int(previous[j][1])), (255, 0, 0), 2)
-                parts.append(top + bottom)
                 if j != 0 and i != 0:
-                    xg, yg = get_isobarycenter(parts[-1])
-                    centroids.append((xg, yg))
-                    cv2.circle(mask,(int(xg),int(yg)), 3, (0, 255, 0), -2)
+                    xg, yg = get_isobarycenter(top + bottom)
+                    centroids.append([(xg, yg), i - 1, j - 1, get_curvature(x1, y1, xin1, yin1), 0]) #centroid, vertical id, horizontal id, curvature, startline
+                    # Compute distane to start line 
+                    d = dist(xg, yg, startline_pixel[0], startline_pixel[1])
+                    if d < closest:
+                        closest = d
+                        startline = i - 1
+                    cv2.circle(mask,(int(xg),int(yg)), 3, (0, 255, 0) if i != 36 else  (0, 0, 255), -2)
             top = [bottom[1], bottom[0]]
             previous[j] = (p, q)
 
+    # Set startline
+    print startline
+    for x in centroids:
+        if x[1] == startline:
+            x[-1] = 1
+
     # Save
-    np.savetxt("centroids_h%d_v%d" %(dh, dv), centroids)
-    np.save("parts_h%d_v%d" %(dh, dv), parts)
+    with open("Acentroids_h%d_v%d.txt" %(dh, dv), "w") as f:
+        f.write("\n".join("%f %f\t%d\t%d\t%f\t%d" %(ctr[0], ctr[1], i, j, curv, start) for ctr, i, j, curv, start in centroids))
     import Image
     Image.fromarray(mask).save("discretized_track_h%d_v%d.png" %(dh, dv))
