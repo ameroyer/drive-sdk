@@ -254,7 +254,10 @@ int main(int argc, char *argv[]) {
     int background_start = 20;  // Index at which the background computation starts
     int background_history = 15; // Number of images to use for median computation
     int nlap = 1;
-    int traing = 0;
+    // training paramters
+    int training = 0;
+    int nepisodes = 10;
+    int nsteps = 20;
 
     /*
      * Read parameters
@@ -289,8 +292,6 @@ int main(int argc, char *argv[]) {
     h = anki_s_init(adapter, car_id, argc>4);
     fprintf(stderr, "Connection successful\n");
     
-    // Initialize a policy 
-    init_det_one_car_policy();
 
     // Additional parameters
     run_index = 0;
@@ -303,54 +304,112 @@ int main(int argc, char *argv[]) {
     float totaltime = 0.;
     gettimeofday(&lapstarttime,NULL);
 
-    // Start
-    res = anki_s_set_speed(h, 400, 20000);
-    camera_loc->real_speed = 400;
-    // Run until ctrl-C
-    while (kbint && !res && nlap > 0) {
-	// Display
-	print_loc(h);
-	print_camera_loc();
-	printf("\n");
+    /*
+     * First: normal (non trainng) mode
+     */
+    if (!training) {	
+	// Initialize a policy 
+	init_det_one_car_policy();
+	// Start
+	res = anki_s_set_speed(h, 400, 20000);
+	camera_loc->real_speed = 400;
+	// Run until ctrl-C
+	while (kbint && !res && nlap > 0) {
+	    // Display
+	    print_loc(h);
+	    print_camera_loc();
+	    printf("\n");
 	
-	// Check if lap finished
-	// TODO: parameters from min,maxid of centroids
-	lap = is_car_finished();
-	if(lap) {
-	    nlap -= lap;
-	    gettimeofday(&lapfinishtime,NULL);
+	    // Check if lap finished
+	    // TODO: parameters from min,maxid of centroids
+	    lap = is_car_finished();
+	    if(lap) {
+		nlap -= lap;
+		gettimeofday(&lapfinishtime,NULL);
 		
-	    laptime = (lapfinishtime.tv_sec - lapstarttime.tv_sec); 
-	    laptime += (lapfinishtime.tv_usec - lapstarttime.tv_usec) / 1000000.;
-	    totaltime += laptime;
-	    lapstarttime=lapfinishtime;
-	    printf("lap time: %.3f\n\n",(laptime));		
-	}
+		laptime = (lapfinishtime.tv_sec - lapstarttime.tv_sec); 
+		laptime += (lapfinishtime.tv_usec - lapstarttime.tv_usec) / 1000000.;
+		totaltime += laptime;
+		lapstarttime=lapfinishtime;
+		printf("lap time: %.3f\n\n",(laptime));		
+	    }
 
-	// Check direction and perform uturn if false
-	loc = anki_s_get_localization(h);
-	if(loc.update_time > 0 && !loc.is_clockwise){
-	    anki_s_uturn(h);	
-	    fprintf(stderr, "U-turn\n");	
-	}
+	    // Check direction and perform uturn if false
+	    loc = anki_s_get_localization(h);
+	    if(loc.update_time > 0 && !loc.is_clockwise){
+		anki_s_uturn(h);	
+		fprintf(stderr, "U-turn\n");	
+	    }
 	
-	// Check if car stands still (no update of loc information) and set speed randomly  if so
-	if(camera_loc->success && abs(previous_camera_loc[0] - camera_loc->x) < epsilon && abs(previous_camera_loc[1] - camera_loc->y) < epsilon){
-	    anki_s_set_speed(h,500 + 1000 * ((double) rand() / (RAND_MAX)), 20000);
-	    fprintf(stderr, "Still\n");
-	}
+	    // Check if car stands still (no update of loc information) and set speed randomly  if so
+	    if(camera_loc->success && abs(previous_camera_loc[0] - camera_loc->x) < epsilon && abs(previous_camera_loc[1] - camera_loc->y) < epsilon){
+		anki_s_set_speed(h,500 + 1000 * ((double) rand() / (RAND_MAX)), 20000);
+		fprintf(stderr, "Still\n");
+	    }
 
-	// Apply policy decsion
-	res = apply_policy(h, *camera_loc);
-	if (res > 0) { // changed speed
-	    camera_loc->real_speed = res;
-	}
+	    // Apply policy decsion
+	    res = apply_policy(h, *camera_loc);
+	    if (res > 0) { // changed speed
+		camera_loc->real_speed = res;
+	    }
 
-	// Next loop
-	run_index += 1;
-	previous_camera_loc[0] = camera_loc->x;
-	previous_camera_loc[1] = camera_loc->y;
-	usleep(control_update * 1000000);
+	    // Next loop
+	    run_index += 1;
+	    previous_camera_loc[0] = camera_loc->x;
+	    previous_camera_loc[1] = camera_loc->y;
+	    usleep(control_update * 1000000);
+	}
+    }
+    /*
+     * Or: training mode
+     */
+    else {
+	init_totrain_policy();
+	// Start
+	res = anki_s_set_speed(h, 400, 20000);
+	camera_loc->real_speed = 400;
+	int episode, step;
+	    for (episode; episode < nepisodes; episode++) {
+		for (step = 0; step < nsteps; step++) {
+		    // Display
+		    print_loc(h);
+		    print_camera_loc();
+		    printf("\n");
+
+	
+		    // Check direction and perform uturn if false
+		    loc = anki_s_get_localization(h);
+		    if(loc.update_time > 0 && !loc.is_clockwise){
+			anki_s_uturn(h);	
+			fprintf(stderr, "U-turn\n");	
+		    }
+	
+		    // Check if car stands still (no update of loc information) and set speed randomly  if so
+		    if(camera_loc->success && abs(previous_camera_loc[0] - camera_loc->x) < epsilon && abs(previous_camera_loc[1] - camera_loc->y) < epsilon){
+			anki_s_set_speed(h,500 + 1000 * ((double) rand() / (RAND_MAX)), 20000);
+			fprintf(stderr, "Still\n");
+		    }
+	
+		    // Apply policy decsion
+		    res = apply_policy_trainingmode(h, *camera_loc, 0.5, 0.1);
+		    if (res > 0) { // changed speed
+			camera_loc->real_speed = res;
+		    }
+
+
+		    // Next loop
+		    run_index += 1;
+		    previous_camera_loc[0] = camera_loc->x;
+		    previous_camera_loc[1] = camera_loc->y;
+		    usleep(control_update * 1000000);
+
+		}
+		//save run
+		export_run();
+		reset_run();
+	    }
+	//save policy
+	export_policy();
     }
 
 

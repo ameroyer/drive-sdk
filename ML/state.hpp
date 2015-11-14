@@ -1,6 +1,6 @@
 #include "../examples/simple-c-interface/anki-simplified.h"
 #include <map>
-
+#include <iostream>
 /*
  * Class centroid
  */
@@ -99,6 +99,7 @@ public:
     //Function 
     int apply(AnkiHandle h) {	
 	anki_s_set_speed(h, speed, accel);
+	std::cout << "DEBUG: Set speed " << speed << "\n";
 	return speed;
     };
     bool operator <(const ActionSpeed& rhs) const {
@@ -122,6 +123,7 @@ public:
     //Functions
     int apply(AnkiHandle h) { 
 	anki_s_change_lane(h, speed, accel, offset);
+	std::cout << "DEBUG: Change lane with offset " << offset << "\n";
 	return 0;
     };
     bool operator <(const ActionLane& rhs) const {
@@ -134,7 +136,7 @@ public:
  */
 class Policy {
 private:
-    std::map<State, std::map<Action, float> > scores;
+    std::map<State, std::map<Action, float> > qscores;
 public:
     Policy() {};
     Action get_next_action(State s);

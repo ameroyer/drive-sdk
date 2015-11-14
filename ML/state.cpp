@@ -56,7 +56,7 @@ int State::get_lane() {
 Action Policy::get_next_action(State s) {
     float max = 0;
     Action best;
-    for(std::map<Action, float>::iterator iterator = scores[s].begin(); iterator != scores[s].end(); iterator++) {
+    for(std::map<Action, float>::iterator iterator = qscores[s].begin(); iterator != qscores[s].end(); iterator++) {
 	if (iterator->second > max) {
 	    max = iterator->second;
 	    best = iterator->first;
@@ -67,7 +67,7 @@ Action Policy::get_next_action(State s) {
 
 float Policy::get_best_score(State s) {
     float max = 0;
-    for(std::map<Action, float>::iterator iterator = scores[s].begin(); iterator != scores[s].end(); iterator++) {
+    for(std::map<Action, float>::iterator iterator = qscores[s].begin(); iterator != qscores[s].end(); iterator++) {
 	if (iterator->second > max) {
 	    max = iterator->second;
 	}
@@ -76,11 +76,11 @@ float Policy::get_best_score(State s) {
 }
 
 void Policy::set_score(State s, Action a, float value) {
-    scores[s][a] = value;
+    qscores[s][a] = value;
 }
 
 float Policy::get_score(State s, Action a) {
-    return scores[s][a];
+    return qscores[s][a];
 }
 
 
