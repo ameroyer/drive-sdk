@@ -294,16 +294,18 @@ int main(int argc, char *argv[]) {
     // Additional parameters
     run_index = 0;
     int res, lap;
+    localization_t loc;
+    struct timeval lapstarttime, lapfinishtime;
     float epsilon = 0.05;
     float previous_camera_loc[2] = {camera_loc->x, camera_loc->y};
-    struct timeval lapstarttime, lapfinishtime;
     float laptime=-1.;
     float totaltime = 0.;
     gettimeofday(&lapstarttime,NULL);
-    localization_t loc;
 
-    // Start Run until ctrl-C
-    res = anki_s_set_speed(h,400,20000);
+    // Start
+    res = anki_s_set_speed(h, 400, 20000);
+    camera_loc->real_speed = 400;
+    // Run until ctrl-C
     while (kbint && !res && nlap > 0) {
 	// Display
 	print_loc(h);
@@ -338,7 +340,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Apply policy decsion
-	apply_policy(h, *camera_loc);
+	res = apply_policy(h, *camera_loc);
+	if (res > 0) { // changed speed
+	    camera_loc->real_speed = res;
+	}
 
 	// Next loop
 	run_index += 1;

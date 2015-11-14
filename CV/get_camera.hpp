@@ -25,6 +25,7 @@ extern "C" {
 	float size; //blob diameter
 	float direction[2]; //Direction vector (ie new position - old position)
 	float speed;
+	float real_speed;
 	int update_time ; /// Last update time (is increased every time we get an update from the car)
 	int success;
     } camera_localization_t

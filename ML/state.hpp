@@ -54,7 +54,7 @@ private:
 // Define a class for actions
 class Action {
 public:
-    void apply(AnkiHandle h) {return;};
+    int apply(AnkiHandle h) {return 0;};
 };
 
 // Set speed
@@ -67,12 +67,14 @@ public:
 	speed = speed_; 
 	accel = accel_;
     };
-    void apply(AnkiHandle h) {	
+    int apply(AnkiHandle h) {	
 	anki_s_set_speed(h, speed, accel);
+	return speed;
     };
 };
 
 // Set lane
+//TODO cqncel lane ?
 class ActionLane: public Action {
 private:
     float offset;
@@ -84,8 +86,9 @@ public:
 	speed = speed_; 
 	accel = accel_;
     };
-    void apply(AnkiHandle h) { 
+    int apply(AnkiHandle h) { 
 	anki_s_change_lane(h, offset, speed, accel);
+	return 0;
     };
 };
 
