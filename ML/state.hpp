@@ -1,8 +1,12 @@
 #include "../examples/simple-c-interface/anki-simplified.h"
+#include <map>
 
-// Centroid
+/*
+ * Class centroid
+ */
 class Centroid {
 public:
+    //Constructors
     Centroid() {};
     Centroid(int id_, float x_, float y_, float straight_, int vseg_, int lane_, int startline_) {
 	id = id_; 
@@ -13,6 +17,7 @@ public:
 	startline=startline_; 
 	lane = lane_; 
     };
+    //Getters
     int get_id();
     float get_x();
     float get_y();
@@ -20,8 +25,9 @@ public:
     int get_lane();
     float get_stra();
 
+    //get distance between (a,b) and centroid
     float get_distance_squared(float a, float b);
-      
+
 private:
     int id;
     float x;
@@ -33,37 +39,50 @@ private:
 };
 
 
-// State for the policy
+/*
+ * Class describing a state in the policy
+ */ 
 class State {
 public:
+    //Constructors
     State() {};
     State(Centroid car_,float speed_) {
 	car=car_; 
 	speed=speed_;
+	carid = car.get_id();
     }
+    //Getters
     Centroid get_car();
-    int get_lane() {
-	return car.get_lane();
-    }
-    float get_speed() {
-	return speed;
-    }
-    float get_stra() {
-	return car.get_stra();
+    int get_lane();
+    float get_speed();
+    float get_stra();
+    
+    //Ovveride < to use State as a key
+    bool operator <(const State& rhs) const {
+	return carid < rhs.carid && speed < rhs.speed;
     }
 
 private:
     Centroid car;
     float speed;
+    int carid;
     //Centroid* opponents; // for later
 };
 
 
+/*
+ * Actions
+ */
 
-// Define a class for actions
+//Mother dummy  class should not be used directly
 class Action {
 public:
     int apply(AnkiHandle h) {return 0;};
+
+    //Ovveride < to use State as a key
+    bool operator <(const Action& rhs) const {
+        return 1;
+    }
 };
 
 // Set speed
@@ -72,44 +91,61 @@ private:
     float speed;
     float accel;
 public:
+    // Constructor
     ActionSpeed(float speed_, float accel_) {
 	speed = speed_; 
 	accel = accel_;
     };
+    //Function 
     int apply(AnkiHandle h) {	
 	anki_s_set_speed(h, speed, accel);
 	return speed;
     };
+    bool operator <(const ActionSpeed& rhs) const {
+        return speed < rhs.speed && accel < rhs.accel;
+    }
 };
 
 // Set lane
-//TODO cqncel lane ?
 class ActionLane: public Action {
 private:
     float offset;
     float speed;
     float accel;
 public:
+    //Constructor
     ActionLane(float offset_, float speed_, float accel_) {
 	offset = offset_; 
 	speed = speed_; 
 	accel = accel_;
     };
+    //Functions
     int apply(AnkiHandle h) { 
 	anki_s_change_lane(h, speed, accel, offset);
 	return 0;
     };
+    bool operator <(const ActionLane& rhs) const {
+        return offset < rhs.offset && speed < rhs.speed && accel < rhs.accel;
+    }
 };
 
-
-// Define Policies
+/*
+ * General policy class
+ */
 class Policy {
+private:
+    std::map<State, std::map<Action, float> > scores;
 public:
-    Action get_next_action(State s) {return Action();};
+    Policy() {};
+    Action get_next_action(State s);
+    float get_best_score(State s);
+    void set_score(State s, Action a, float value);
+    float get_score(State s, Action a);
 };
 
-
-// Here create the deterministic policy for one car(see cpp)
+/*
+ * One car deterministic policy
+ */
 class DetOneCarPolicy: public Policy {
 private:
     int max_speed_straight;
@@ -129,6 +165,7 @@ public:
 	laneoffset = laneoffset_;
 	curve_threshold = curve_threshold_;
     }
+    //@Override
     Action get_next_action(State s);
 };
 

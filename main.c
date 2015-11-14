@@ -254,6 +254,7 @@ int main(int argc, char *argv[]) {
     int background_start = 20;  // Index at which the background computation starts
     int background_history = 15; // Number of images to use for median computation
     int nlap = 1;
+    int traing = 0;
 
     /*
      * Read parameters
@@ -351,6 +352,7 @@ int main(int argc, char *argv[]) {
 	previous_camera_loc[1] = camera_loc->y;
 	usleep(control_update * 1000000);
     }
+
 
     /*
      * Close and disconnect

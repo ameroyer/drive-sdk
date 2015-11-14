@@ -1,4 +1,5 @@
 #include "state.hpp"
+#include <iterator>
 
 // Centroid
 int Centroid::get_id() { 
@@ -35,8 +36,57 @@ Centroid State::get_car() {
     return car;
 }
 
+float State::get_speed() {
+    return speed;
+}
 
-//Deterministic One car policy
+float State::get_stra() {
+    return car.get_stra();
+}
+
+int State::get_lane() {
+    return car.get_lane();
+}
+
+/*
+ * General policies
+ */
+
+//find action that maximizes the score for state s
+Action Policy::get_next_action(State s) {
+    float max = 0;
+    Action best;
+    for(std::map<Action, float>::iterator iterator = scores[s].begin(); iterator != scores[s].end(); iterator++) {
+	if (iterator->second > max) {
+	    max = iterator->second;
+	    best = iterator->first;
+	}
+    }
+    return best;
+}
+
+float Policy::get_best_score(State s) {
+    float max = 0;
+    for(std::map<Action, float>::iterator iterator = scores[s].begin(); iterator != scores[s].end(); iterator++) {
+	if (iterator->second > max) {
+	    max = iterator->second;
+	}
+    }
+    return max;
+}
+
+void Policy::set_score(State s, Action a, float value) {
+    scores[s][a] = value;
+}
+
+float Policy::get_score(State s, Action a) {
+    return scores[s][a];
+}
+
+
+/*
+ * Deterministic One car policy
+ */
 Action DetOneCarPolicy::get_next_action(State s) {
     //int centid=s.get_car().get_id();
     //int speed1=1000;
@@ -62,6 +112,5 @@ Action DetOneCarPolicy::get_next_action(State s) {
 	if (s.get_speed() < max_speed_curve) {
 	    return ActionSpeed(max_speed_curve, accel);
 	}
-    }
-	
+    }	
 };
