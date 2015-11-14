@@ -84,7 +84,9 @@ public:
 	speed = speed_; 
 	accel = accel_;
     };
-    void apply(AnkiHandle h);
+    void apply(AnkiHandle h) { 
+	anki_s_change_lane(h, offset, speed, accel);
+    };
 };
 
 

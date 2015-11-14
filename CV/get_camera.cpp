@@ -47,6 +47,18 @@ using namespace cv;
 static int ppm_width = 1696;
 static int ppm_height = 720;
 static volatile int keepRunning = 1;
+static int has_finished = 0; // Number of laps done and not yet discounter
+
+int is_car_finished() {
+    if (!has_finished) {
+	int res = has_finished;
+	has_finished = 0;
+	return res;
+    } else {
+	return 0;
+    }
+}
+
 
 void intHandler(int dummy) {
     keepRunning = 0;
@@ -268,7 +280,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     detector->detect(im, keypoints);
 
     // Finding car
-    int h;
+    int h, c;
     int obst = 0;
     camera_loc->success = 0;
     for(std::vector<KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
@@ -283,7 +295,12 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 	    camera_loc->x = (*it).pt.x;
 	    camera_loc->y = (*it).pt.y;
 	    camera_loc->size = (*it).size;
-	    camera_loc->centroid = get_centroid((*it).pt.x, (*it).pt.y);
+	    // Set new centroid
+	    c = get_centroid((*it).pt.x, (*it).pt.y);
+	    if (centroids_list[c].get_start() && !centroids_list[camera_loc->centroid].get_start()) {
+		has_finished += 1;
+	    }
+	    camera_loc->centroid = c;
 	    camera_loc->success = 1;
 	}
 	else if (obst < camera_obst->total) {
@@ -296,6 +313,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     camera_obst->found = obst;
     camera_obst->update_time = index;
     camera_loc->update_time = index;
+    // if cqr not found, set dead reckon coordinates
 
     // Additional verbose output
     if (verbose) {

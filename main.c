@@ -253,6 +253,7 @@ int main(int argc, char *argv[]) {
     float background_update = 5; // Update of the background, `` `` ``
     int background_start = 20;  // Index at which the background computation starts
     int background_history = 15; // Number of images to use for median computation
+    int nlap = 1;
 
     /*
      * Read parameters
@@ -292,35 +293,37 @@ int main(int argc, char *argv[]) {
 
     // Additional parameters
     run_index = 0;
-    int res;
+    int res, lap;
     float epsilon = 0.05;
     float previous_camera_loc[2] = {camera_loc->x, camera_loc->y};
-    int previous_centroid = camera_loc->centroid;
     struct timeval lapstarttime, lapfinishtime;
     float laptime=-1.;
+    float totaltime = 0.;
     gettimeofday(&lapstarttime,NULL);
     localization_t loc;
 
     // Start Run until ctrl-C
     res = anki_s_set_speed(h,400,20000);
-    while (kbint && !res) {
+    while (kbint && !res && nlap > 0) {
 	// Display
 	print_loc(h);
 	print_camera_loc();
 	printf("\n");
 	
-	// Check if lap finished, TODO: parameters from min,maxid of centroids
-	if(camera_loc->centroid>90&&previous_centroid<20)
-	{
-		gettimeofday(&lapfinishtime,NULL);
+	// Check if lap finished
+	// TODO: parameters from min,maxid of centroids
+	lap = is_car_finished();
+	if(lap) {
+	    nlap -= lap;
+	    gettimeofday(&lapfinishtime,NULL);
 		
-		laptime = (lapfinishtime.tv_sec - lapstarttime.tv_sec); 
-		laptime += (lapfinishtime.tv_usec - lapstarttime.tv_usec) / 1000000.;
-		lapstarttime=lapfinishtime;
-		printf("Lap finished! :-)\n");
-		printf("lap time: %.3f\n\n",(laptime));
-		
+	    laptime = (lapfinishtime.tv_sec - lapstarttime.tv_sec); 
+	    laptime += (lapfinishtime.tv_usec - lapstarttime.tv_usec) / 1000000.;
+	    totaltime += laptime;
+	    lapstarttime=lapfinishtime;
+	    printf("lap time: %.3f\n\n",(laptime));		
 	}
+
 	// Check direction and perform uturn if false
 	loc = anki_s_get_localization(h);
 	if(loc.update_time > 0 && !loc.is_clockwise){
@@ -341,13 +344,13 @@ int main(int argc, char *argv[]) {
 	run_index += 1;
 	previous_camera_loc[0] = camera_loc->x;
 	previous_camera_loc[1] = camera_loc->y;
-	previous_centroid = camera_loc->centroid;
 	usleep(control_update * 1000000);
     }
 
     /*
      * Close and disconnect
      */
+    printf("Time elapsed: %f\n", totaltime);
     anki_s_close(h);
     exit_signal = 1;
     pthread_join(camera, NULL);
