@@ -42,6 +42,15 @@ public:
 	speed=speed_;
     }
     Centroid get_car();
+    int get_lane() {
+	return car.get_lane();
+    }
+    float get_speed() {
+	return speed;
+    }
+    float get_stra() {
+	return car.get_stra();
+    }
 
 private:
     Centroid car;
@@ -87,7 +96,7 @@ public:
 	accel = accel_;
     };
     int apply(AnkiHandle h) { 
-	anki_s_change_lane(h, offset, speed, accel);
+	anki_s_change_lane(h, speed, accel, offset);
 	return 0;
     };
 };
@@ -102,7 +111,24 @@ public:
 
 // Here create the deterministic policy for one car(see cpp)
 class DetOneCarPolicy: public Policy {
+private:
+    int max_speed_straight;
+    int max_speed_curve;
+    int accel;
+    int straight_lane;
+    int curve_lane;
+    int laneoffset;
+    float curve_threshold;
 public:
+    DetOneCarPolicy(int max_speed_straight_ = 1800, int max_speed_curve_ = 1400,  int accel_ = 2000, int straight_lane_ = 2, int curve_lane_ = 1, int laneoffset_ = 1000, float curve_threshold_ = 0.85) {
+	max_speed_straight = max_speed_straight_;
+	max_speed_curve = max_speed_curve_;
+	accel = accel_;
+	straight_lane = straight_lane_;
+	curve_lane = curve_lane_;
+	laneoffset = laneoffset_;
+	curve_threshold = curve_threshold_;
+    }
     Action get_next_action(State s);
 };
 
