@@ -109,7 +109,7 @@ void* update_camera_loc(void* aux) {
 
     //Init structures
     init_blob_detector();
-    init_centroids_list("CV/centroids_h100_v3.txt");
+    init_centroids_list("CV/centroids_h100_v3.txt", verbose);
     camera_obst = (camera_obst_localization_t*) malloc(sizeof(camera_obst_localization_t));
     camera_obst->total = args->n_obst;
     camera_loc = (camera_localization_t*) malloc(sizeof(camera_localization_t));
@@ -293,7 +293,7 @@ int main(int argc, char *argv[]) {
     // Additional parameters
     run_index = 0;
     int res;
-	float epsilon = 0.05;
+    float epsilon = 0.05;
     float previous_camera_loc[2] = {camera_loc->x, camera_loc->y};
     int previous_centroid = camera_loc->centroid;
     struct timeval lapstarttime, lapfinishtime;
@@ -334,7 +334,7 @@ int main(int argc, char *argv[]) {
 	    fprintf(stderr, "Still\n");
 	}
 
-	// Check current action
+	// Apply policy decsion
 	apply_policy(h, *camera_loc);
 
 	// Next loop

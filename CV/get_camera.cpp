@@ -54,24 +54,23 @@ void intHandler(int dummy) {
 
 // List of discrete states/ centroids
 //static std::vector<Centroid> centroids_list; // List of all possible states
-
-//TODO:extract more info
-void init_centroids_list(char* filename) {
+void init_centroids_list(char* filename, int verbose) {
 	
-	std::ifstream infile(filename);
-	std::string line;
-	int id=0;
-	while (std::getline(infile, line))
+    std::ifstream infile(filename);
+    std::string line;
+    int id=0;
+    while (std::getline(infile, line))
 	{
-		std::istringstream iss(line);
-		float x, y, c;
-		int i, j, s;
-		if (!(iss >> x >> y >> i >> j >> c >> s)) { break; } 
-		Centroid cent(id, x, y, 1. - c, i, j, s);
-		centroids_list.push_back(cent);
-		id++;
-
+	    std::istringstream iss(line);
+	    float x, y, c;
+	    int i, j, s;
+	    if (!(iss >> x >> y >> i >> j >> c >> s)) { break; } 
+	    Centroid cent(id, x, y, 1. - c, i, j, s);
+	    centroids_list.push_back(cent);
+	    id++;
+	    if (verbose) {
 		printf ("centroid %d: (%f, %f) curv: %f, start: %d, lane: %d \n",cent.get_id(),cent.get_x(),cent.get_y(), cent.get_stra(), cent.get_start(), cent.get_lane());
+	    }
 	}
     return;
 }
