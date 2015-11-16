@@ -38,7 +38,9 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "init_centroids.hpp"
+#include <sys/time.h>
+#include <time.h>
+#include "../ML/state.hpp"
 
 using namespace cv;
 
@@ -47,16 +49,29 @@ using namespace cv;
 static int ppm_width = 1696;
 static int ppm_height = 720;
 static volatile int keepRunning = 1;
-static int has_finished = 0; // Number of laps done and not yet discounter
+static int has_finished = 0; // Number of laps done and not discounted yet
+static int startline = 0;
+static float laptime=-1.;
+static struct timeval lapfinishtime;
 
-int is_car_finished() {
-    if (!has_finished) {
-	int res = has_finished;
-	has_finished = 0;
-	return res;
+void car_finished() {
+	gettimeofday(&lapfinishtime, NULL);
+	laptime = (lapfinishtime.tv_sec - lapstarttime.tv_sec); 
+	laptime += (lapfinishtime.tv_usec - lapstarttime.tv_usec) / 1000000.;
+	has_finished = 1;
+	lapstarttime=lapfinishtime;
+}
+
+float is_car_finished() {
+	float res;
+    if (laptime > 0) {
+	res = laptime;
+	//printf("Before %.3f\n", laptime);
+	laptime = 0.;
     } else {
-	return 0;
+	res = 0.;
     }
+	return res;
 }
 
 
@@ -79,6 +94,9 @@ void init_centroids_list(char* filename, int verbose) {
 	    if (!(iss >> x >> y >> i >> j >> c >> s)) { break; } 
 	    Centroid cent(id, x, y, 1. - c, i, j, s);
 	    centroids_list.push_back(cent);
+	    if (s) {
+		startline = id;
+	    }
 	    id++;
 	    if (verbose) {
 		printf ("centroid %d: (%f, %f) curv: %f, start: %d, lane: %d \n",cent.get_id(),cent.get_x(),cent.get_y(), cent.get_stra(), cent.get_start(), cent.get_lane());
@@ -285,7 +303,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     camera_loc->success = 0;
     for(std::vector<KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
 	h = get_mean_hue(shm->data, (int) (*it).pt.x, (int) (*it).pt.y, (int) (0.5 * (*it).size));
-	if (!strcmp(get_car_from_hue(h), car_color)) {
+	if (!camera_obst->total || !strcmp(get_car_from_hue(h), car_color)) {
 	    // Update speed and direction
 	    camera_loc->direction[0] = ((*it).pt.x - camera_loc-> x);
 	    camera_loc->direction[1] = ((*it).pt.y - camera_loc-> y);
@@ -295,12 +313,6 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 	    camera_loc->x = (*it).pt.x;
 	    camera_loc->y = (*it).pt.y;
 	    camera_loc->size = (*it).size;
-	    // Set new centroid
-	    c = get_centroid((*it).pt.x, (*it).pt.y);
-	    if (centroids_list[c].get_start() && !centroids_list[camera_loc->centroid].get_start()) {
-		has_finished += 1;
-	    }
-	    camera_loc->centroid = c;
 	    camera_loc->success = 1;
 	}
 	else if (obst < camera_obst->total) {
@@ -310,6 +322,17 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 	    camera_obst->centroids[obst] = get_centroid((*it).pt.x, (*it).pt.y);
 	}
     }
+	if (!camera_loc->success) {
+	camera_loc->x = camera_loc->x + camera_loc->speed * (index - camera_loc->update_time) * camera_loc->direction[0];
+	camera_loc->y = camera_loc->y + camera_loc->speed * (index - camera_loc->update_time) * camera_loc->direction[1];
+	}
+	    // Set new centroid
+	    c = get_centroid(camera_loc->x, camera_loc->y);
+	    if ((c == 0 || c == 1 || c == 2 ) && (camera_loc->centroid > 3)) {
+		car_finished();
+		//printf("Lap %f, %f %d %d\n", camera_loc->x, camera_loc->y, c, camera_loc->centroid);
+	    }
+	    camera_loc->centroid = c;
     camera_obst->found = obst;
     camera_obst->update_time = index;
     camera_loc->update_time = index;

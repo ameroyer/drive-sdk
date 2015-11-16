@@ -93,9 +93,9 @@ if __name__ == "__main__":
     ##### 1. Get the track mask
 
     # Load Image
-    image = cv2.imread('../Images/default_background.ppm') 
+    image = cv2.imread('/home/cvml1/Code/Images/default_background.ppm') 
     mask = np.zeros_like(image)
-    
+
     print "Extract track mask"
     # Apply dilation and contour detection
     kernel = np.ones((10,10),np.uint8)
@@ -238,9 +238,13 @@ if __name__ == "__main__":
             previous[j] = (p, q)
 
     # Set startline
-    for x in centroids:
+    for i, x in enumerate(centroids):
         if x[1] == startline:
             x[-1] = 1
+	    centroids[i+1][-1] = 1
+	    centroids[i+2][-1] = 1
+	    break
+    centroids = centroids[i:] + centroids[:i]
 
     # Save
     with open("centroids_h%d_v%d.txt" %(dh, dv), "w") as f:

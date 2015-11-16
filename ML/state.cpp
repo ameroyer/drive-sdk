@@ -48,6 +48,11 @@ int State::get_lane() {
     return car.get_lane();
 }
 
+int State::get_carid() {
+    return carid;
+}
+
+
 /*
  * General policies
  */
@@ -93,24 +98,38 @@ Action DetOneCarPolicy::get_next_action(State s) {
     //if(centid>50){speed1=200;}
     //return ActionSpeed(speed1,2000);
 
-    // In straight part, go on inside lane and increase speed
-    if (s.get_stra() > curve_threshold) {
-	if (s.get_lane() > straight_lane) {
-	    return ActionLane(laneoffset, max_speed_straight, accel);
+    // Do nothing if last action
+     int step = 1;
+     int begin = 0;
+     int cid = s.get_carid();
+     float curv = 0;
+	for (int i = begin; i <= begin + step; i ++) {
+	curv += centroids_list[(centroids_list.size() + cid - 3 * i) % centroids_list.size()].get_stra();
 	}
-	if (s.get_speed() < max_speed_straight) {
-	    return ActionSpeed(max_speed_straight, accel);
+     curv /= (step + 1);
+	//printf("curv: %f \n", curv);
+    // In straight part, go on inside lane and increase speed
+    if (curv > curve_threshold) {
+	if (curv > 0.92 && s.get_lane() < straight_lane && last_action_type != 2) {
+	    last_action_type = 2;
+	    return Action(-laneoffset, 300, accel);
+	}
+	if (s.get_speed() != max_speed_straight) {
+	    last_action_type = 1;
+	    return Action(max_speed_straight, accel);
 	}
     }
+    // In curve parts, go on middle lane and slightly decrease speed
     else {
-	if (s.get_lane() > curve_lane) {
-	    return ActionLane(- laneoffset, max_speed_curve, accel);
+	if (curv > 0.65 && s.get_lane() > curve_lane && last_action_type != 2) {
+	    last_action_type = 2;
+	    return Action(laneoffset, 100, accel);
 	}
-	if (s.get_lane() < curve_lane) {
-	    return ActionLane(laneoffset, max_speed_curve, accel);
-	}
-	if (s.get_speed() < max_speed_curve) {
-	    return ActionSpeed(max_speed_curve, accel);
+	if (s.get_speed() != max_speed_curve) {
+	    last_action_type = 1;
+	    return Action(max_speed_curve, accel);
 	}
     }	
+    last_action_type = 0;
+    return Action();
 };

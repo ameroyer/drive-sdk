@@ -47,7 +47,7 @@ if (BUILD_PROJECT)
     examples/simple-c-interface/anki-simplified.c
     ML/state.hpp
     ML/state.cpp
-	CV/init_centroids.cpp
+    CV/init_centroids.cpp
     ML/policies.cpp
     CV/quickselect.c
     CV/get_camera.cpp

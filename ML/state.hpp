@@ -1,6 +1,12 @@
 #include "../examples/simple-c-interface/anki-simplified.h"
 #include <map>
 #include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <vector>
+
+
+
 /*
  * Class centroid
  */
@@ -39,6 +45,8 @@ private:
 };
 
 
+extern std::vector<Centroid> centroids_list;
+
 /*
  * Class describing a state in the policy
  */ 
@@ -56,6 +64,7 @@ public:
     int get_lane();
     float get_speed();
     float get_stra();
+	int get_carid();
     
     //Ovveride < to use State as a key
     bool operator <(const State& rhs) const {
@@ -74,62 +83,53 @@ private:
  * Actions
  */
 
-//Mother dummy  class should not be used directly
 class Action {
-public:
-    int apply(AnkiHandle h) {return 0;};
-
-    //Ovveride < to use State as a key
-    bool operator <(const Action& rhs) const {
-        return 1;
-    }
-};
-
-// Set speed
-class ActionSpeed: public Action {
-private:
-    float speed;
-    float accel;
-public:
-    // Constructor
-    ActionSpeed(float speed_, float accel_) {
-	speed = speed_; 
-	accel = accel_;
-    };
-    //Function 
-    int apply(AnkiHandle h) {	
-	anki_s_set_speed(h, speed, accel);
-	std::cout << "DEBUG: Set speed " << speed << "\n";
-	return speed;
-    };
-    bool operator <(const ActionSpeed& rhs) const {
-        return speed < rhs.speed && accel < rhs.accel;
-    }
-};
-
-// Set lane
-class ActionLane: public Action {
-private:
+protected:
+    int type;
     float offset;
     float speed;
     float accel;
 public:
-    //Constructor
-    ActionLane(float offset_, float speed_, float accel_) {
+    //Constructors
+
+    //type 0: null action
+    Action() {type = 0;}
+
+    //type1: speed action
+    Action(float speed_, float accel_) {
+	speed = speed_; 
+	accel = accel_;
+	type = 1;
+    };
+
+    //type2: accel action
+    Action(float offset_, float speed_, float accel_) {
 	offset = offset_; 
 	speed = speed_; 
 	accel = accel_;
+	type = 2;
     };
-    //Functions
-    int apply(AnkiHandle h) { 
-	anki_s_change_lane(h, speed, accel, offset);
-	std::cout << "DEBUG: Change lane with offset " << offset << "\n";
-	return 0;
+    int apply(AnkiHandle h) {
+	if (type == 0) {
+	    std::cerr << "DEBUG: No action\n";
+	    return 0;
+	} else if (type == 1) {
+	    anki_s_set_speed(h, speed, accel);
+	    std::cerr << "DEBUG: Set speed " << speed << "\n";
+	    return speed;
+	} else {
+	    anki_s_change_lane(h, offset, speed, accel);
+	    std::cout << "DEBUG: Change lane with offset " << offset << "\n";
+	    return 0;
+	}
     };
-    bool operator <(const ActionLane& rhs) const {
-        return offset < rhs.offset && speed < rhs.speed && accel < rhs.accel;
+
+    //Ovveride < to use Actione as a key
+    bool operator <(const Action& rhs) const {
+        return (type < rhs.type)||(type == 1 && rhs.type == 1 && speed < rhs.speed && accel < rhs.accel)||(type == 2 && rhs.type == 2 && speed < rhs.speed && accel < rhs.accel && offset < rhs.offset);
     }
 };
+
 
 /*
  * General policy class
@@ -150,15 +150,17 @@ public:
  */
 class DetOneCarPolicy: public Policy {
 private:
-    int max_speed_straight;
-    int max_speed_curve;
-    int accel;
+    float max_speed_straight;
+    float max_speed_curve;
+    float accel;
     int straight_lane;
     int curve_lane;
-    int laneoffset;
+    float laneoffset;
     float curve_threshold;
+    int last_action_type; // "cool down": Use to forbid two change lane actions in a row
 public:
-    DetOneCarPolicy(int max_speed_straight_ = 1800, int max_speed_curve_ = 1400,  int accel_ = 2000, int straight_lane_ = 2, int curve_lane_ = 1, int laneoffset_ = 1000, float curve_threshold_ = 0.85) {
+    // Constructor
+    DetOneCarPolicy(float max_speed_straight_ = 1500., float max_speed_curve_ = 1100.,  float accel_ = 2000., int straight_lane_ = 2, int curve_lane_ = 1, float laneoffset_ = 1000., float curve_threshold_ = 0.8) {
 	max_speed_straight = max_speed_straight_;
 	max_speed_curve = max_speed_curve_;
 	accel = accel_;
@@ -166,6 +168,7 @@ public:
 	curve_lane = curve_lane_;
 	laneoffset = laneoffset_;
 	curve_threshold = curve_threshold_;
+	last_action_type = 0;
     }
     //@Override
     Action get_next_action(State s);

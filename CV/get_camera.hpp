@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+
+
     /**
      * Camera image type
      */
@@ -42,7 +44,7 @@ extern "C" {
 	int total;
     } camera_obst_localization_t
     ;
-
+    extern struct timeval lapstarttime;
     extern camera_localization_t* camera_loc;
     extern camera_obst_localization_t* camera_obst;
     extern unsigned char** input_median;
@@ -68,7 +70,7 @@ extern "C" {
      */
     void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_color);
     void get_camera_lock_dead_reckon(int time, float result[2]);
-    int is_car_finished();
+    float is_car_finished();
 
     /**
      * Substract two camera images
