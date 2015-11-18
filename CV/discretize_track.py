@@ -14,6 +14,12 @@ def dist(x1, y1, x2, y2):
     """
     return np.sqrt((y2 - y1)**2 + (x2 - x1)**2)
 
+def leng(x1,y1):
+    """
+    Return length of vector (x1, y1) 
+    """
+    return np.sqrt((y1)**2 + (x1)**2)
+
 
 def get_normal(x1, y1, x2, y2):
     """
@@ -213,6 +219,8 @@ if __name__ == "__main__":
     for i, (x1, y1, xin1, yin1) in enumerate(vsegments):
         d = dist(x1, y1, xin1, yin1)
         x2, y2, xin2, yin2 = vsegments[(i - 1) % len(vsegments)]
+        x3, y3, xin3, yin3 = vsegments[(i - 2) % len(vsegments)]
+        x0, y0, xin0, yin0 = vsegments[(i + 1) % len(vsegments)]
         top = [(x1, y1), (x2, y2)]
         for j in xrange(dv + 1):
             # Compute intersection on the vertical segment
@@ -226,14 +234,26 @@ if __name__ == "__main__":
             else:
                 cv2.line(mask, (int(p), int(q)), (int(previous[j][0]), int(previous[j][1])), (255, 0, 0), 2)
                 if j != 0 and i != 0:
+                    #print dist(xin1 - x1, yin1 - y1, xin2 - x2, yin2 - y2)
                     xg, yg = get_isobarycenter(top + bottom)
-                    centroids.append([(xg, yg), i - 1, j - 1, get_curvature(x1, y1, xin1, yin1), 0]) #centroid, vertical id, horizontal id, curvature, startline
+                    #curv = get_curvature(x2, y2, xin2, yin2) #* abs(scalar(xin1 - x1, yin1 - y1, xin2 - x2, yin2 - y2)) / dist(xin1 - x1, yin1 - y1, xin2 - x2, yin2 - y2)
+                    scalarpiece=scalar(x1-xin1,y1-yin1,x2-xin2,y2-yin2)/(leng(x1-xin1,y1-yin1)*leng(x2-xin2,y2-yin2))
+                    scalarnextcw=scalar(x3-xin3,y3-yin3,x2-xin2,y2-yin2)/(leng(x3-xin3,y3-yin3)*leng(x2-xin2,y2-yin2))
+                    scalarbeforecw=scalar(x1-xin1,y1-yin1,x0-xin0,y0-yin0)/(leng(x1-xin1,y1-yin1)*leng(x0-xin0,y0-yin0))
+                    sprods=min(scalarpiece,scalarnextcw,scalarbeforecw)
+                    curv=0
+                    if sprods < 0.99:
+                       curv=0.5
+                    if sprods < 0.95:
+                       curv=1
+                    print(curv)
+                    centroids.append([(xg, yg), i - 1, j - 1, curv, 0]) #centroid, vertical id, horizontal id, curvature, startline
                     # Compute distane to start line 
                     d = dist(xg, yg, startline_pixel[0], startline_pixel[1])
                     if d < closest:
                         closest = d
                         startline = i - 1
-                    cv2.circle(mask,(int(xg),int(yg)), 3, (0, 255, 0) if i != 36 else  (0, 0, 255), -2)
+                    cv2.circle(mask,(int(xg),int(yg)), 3, (0, 255*curv, 0) if i != 36 else  (0, 0, 255), -2)
             top = [bottom[1], bottom[0]]
             previous[j] = (p, q)
 

@@ -99,36 +99,31 @@ Action DetOneCarPolicy::get_next_action(State s) {
     //return ActionSpeed(speed1,2000);
 
     // Do nothing if last action
-     int step = 1;
-     int begin = 0;
-     int cid = s.get_carid();
-     float curv = 0;
-	for (int i = begin; i <= begin + step; i ++) {
-	curv += centroids_list[(centroids_list.size() + cid - 3 * i) % centroids_list.size()].get_stra();
-	}
-     curv /= (step + 1);
-	//printf("curv: %f \n", curv);
+    float previous = centroids_list[(s.get_carid() + 1)% centroids_list.size()].get_stra();
+    float after = centroids_list[(centroids_list.size() + s.get_carid() - 1)% centroids_list.size()].get_stra();
+    float now = s.get_stra();
+    printf("centroid : %d, lane %d, vseg: %d, curv: %f \n", s.get_carid(), s.get_car().get_lane(), s.get_car().get_vseg(),now);
     // In straight part, go on inside lane and increase speed
-    if (curv > curve_threshold) {
-	if (curv > 0.92 && s.get_lane() < straight_lane && last_action_type != 2) {
-	    last_action_type = 2;
-	    return Action(-laneoffset, 300, accel);
-	}
-	if (s.get_speed() != max_speed_straight) {
+    if (now< curve_threshold) {
+		if (s.get_speed() != max_speed_straight) {
 	    last_action_type = 1;
-	    return Action(max_speed_straight, accel);
+	    return Action(max_speed_straight, 2*accel);
 	}
+	/*if (s.get_lane() < straight_lane && last_action_type!=2) {
+	    last_action_type = 2;
+	    return Action(-laneoffset, 100, accel);
+	}*/
     }
     // In curve parts, go on middle lane and slightly decrease speed
-    else {
-	if (curv > 0.65 && s.get_lane() > curve_lane && last_action_type != 2) {
-	    last_action_type = 2;
-	    return Action(laneoffset, 100, accel);
-	}
+    else if (now > curve_threshold ){
 	if (s.get_speed() != max_speed_curve) {
 	    last_action_type = 1;
 	    return Action(max_speed_curve, accel);
 	}
+	/*if (s.get_lane() > curve_lane  && last_action_type!=2) {
+	    last_action_type = 2;
+	    return Action(laneoffset, 100, accel);
+	}*/
     }	
     last_action_type = 0;
     return Action();

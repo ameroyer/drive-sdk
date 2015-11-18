@@ -328,7 +328,8 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 	}
 	    // Set new centroid
 	    c = get_centroid(camera_loc->x, camera_loc->y);
-	    if ((c == 0 || c == 1 || c == 2 ) && (camera_loc->centroid > 3)) {
+	    //if ((c <3||c>centroids_list.size()-floor(centroids_list.size()/2)) && (camera_loc->centroid >= 3&&camera_loc->centroid <= c>centroids_list.size()-floor(centroids_list.size()/2))) {
+	    if((c>floor(centroids_list.size()*0.75))&&camera_loc->centroid<floor(centroids_list.size()/4)){
 		car_finished();
 		//printf("Lap %f, %f %d %d\n", camera_loc->x, camera_loc->y, c, camera_loc->centroid);
 	    }

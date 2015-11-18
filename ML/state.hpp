@@ -29,6 +29,7 @@ public:
     float get_y();
     int get_start();
     int get_lane();
+    int get_vseg() {return vseg;};
     float get_stra();
 
     //get distance between (a,b) and centroid
@@ -160,7 +161,7 @@ private:
     int last_action_type; // "cool down": Use to forbid two change lane actions in a row
 public:
     // Constructor
-    DetOneCarPolicy(float max_speed_straight_ = 1500., float max_speed_curve_ = 1100.,  float accel_ = 2000., int straight_lane_ = 2, int curve_lane_ = 1, float laneoffset_ = 1000., float curve_threshold_ = 0.8) {
+    DetOneCarPolicy(float max_speed_straight_ = 1700., float max_speed_curve_ = 1000.,  float accel_ = 2000., int straight_lane_ = 2, int curve_lane_ = 1, float laneoffset_ = 1000., float curve_threshold_ = 0.7) {
 	max_speed_straight = max_speed_straight_;
 	max_speed_curve = max_speed_curve_;
 	accel = accel_;

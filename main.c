@@ -61,7 +61,7 @@ static void intHandler(int sig) {
 void print_loc(AnkiHandle h){
     localization_t loc;
     loc = anki_s_get_localization(h);
-    printf(KBLU "[Location]" RESET " segm: %03x subsegm: %03x clock-wise: %i last-update: %i\n",
+    printf(KBLU "[Loc]" RESET " segm: %03x subsegm: %03x clock-wise: %i last-update: %i\n",
 	   loc.segm, loc.subsegm, loc.is_clockwise, loc.update_time);
 }
 
@@ -71,12 +71,10 @@ void print_loc(AnkiHandle h){
  */
 void print_camera_loc(){
     if (camera_loc->success) {
-	printf(KBOLD KGRN "[Camera location]" RESET " centroid: %d x: %.2f y: %.2f size: %.2f last-update: %i\n",
+	printf(KBOLD KGRN "[Camera loc]" RESET " centroid: %d x: %.2f y: %.2f size: %.2f last-update: %i\n",
 	       camera_loc->centroid,camera_loc->x, camera_loc->y, camera_loc->size, camera_loc->update_time);
     } else {
-	float result[2];
-	get_camera_lock_dead_reckon(camera_index, result);
-	printf(KBOLD KRED "[Camera location (DR)]" RESET " x: %.2f y: %.2f size: %.2f last-update: %i\n", result[0], result[1], camera_loc->size, camera_loc->update_time);
+	printf(KBOLD KRED "[Camera loc (DR)]" RESET " centroid: %d x: %.2f y: %.2f size: %.2f last-update: %i\n", camera_loc->centroid,camera_loc->x, camera_loc->y, camera_loc->size, camera_loc->update_time);
     }
 }
 
@@ -117,6 +115,10 @@ void* update_camera_loc(void* aux) {
     camera_loc->x = 850;
     camera_loc->y = 50;
     camera_loc->update_time = 0;
+    camera_loc ->speed = 1.;
+    camera_loc->size = 0;
+    camera_loc->direction[0] = 1;
+    camera_loc->direction[1] = 0;
     input_median = (unsigned char**) malloc(sizeof(unsigned char*) * bg_history);
     int i;
     for (i = 0; i < bg_history; i++) {
@@ -136,10 +138,10 @@ void* update_camera_loc(void* aux) {
     // Load background
     background = (shared_struct*) malloc(sizeof(shared_struct));
     background->count = 0;
-    //FILE *f = fopen("/home/cvml1/Code/Images/default_background.txt", "rb");
-    //fread(background->data, IMAGE_SIZE, 1, f);
-    //fclose(f);
-    memcpy(background->data, shm->data, IMAGE_SIZE);
+    FILE *f = fopen("/home/cvml1/Code/Images/default_background.txt", "rb");
+    fread(background->data, IMAGE_SIZE, 1, f);
+    fclose(f);
+    //memcpy(background->data, shm->data, IMAGE_SIZE);
 
     // Additional Paramaters
     camera_index = 0;
