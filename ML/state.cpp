@@ -100,13 +100,13 @@ float Policy::get_score(State s, Action a) {
 Action DetOneCarPolicy::get_next_action(State s) {
 
     // Do nothing if last action
-    int step = 2;
-    float previous = centroids_list[(s.get_carid() + 3 * step)% centroids_list.size()].get_stra();
-    float after = centroids_list[(centroids_list.size() + s.get_carid() - 3 * step)% centroids_list.size()].get_stra();
+    int step = 4;
+    float previous = centroids_list[(s.get_carid() + 4 * step)% centroids_list.size()].get_stra();
+    float after = centroids_list[(centroids_list.size() + s.get_carid() - 4 * step)% centroids_list.size()].get_stra();
     float now = s.get_stra();
     printf("centroid : %d, lane %d, vseg: %d, curv: %f \n", s.get_carid(), s.get_car().get_lane(), s.get_car().get_vseg(),now);
     // In straight part, go on inside lane and increase speed
-    if (now < curve_threshold) {
+    if (now < curve_threshold && after >= curve_threshold) {
 	if (s.get_speed() != max_speed_straight) {
 	    last_action_type = 1;
 	    return Action(max_speed_straight, accel);
@@ -117,10 +117,10 @@ Action DetOneCarPolicy::get_next_action(State s) {
 	  }*/
     }
     // In curve parts, go on middle lane and slightly decrease speed
-    else {
+    else if (now > curve_threshold && after <= curve_threshold) {
 	if (s.get_speed() != max_speed_curve) {
 	    last_action_type = 1;
-	    return Action(max_speed_curve, 0.05 * accel);
+	    return Action(max_speed_curve, accel);
 	}
 	/*if (s.get_lane() > curve_lane  && last_action_type!=2) {
 	  last_action_type = 2;

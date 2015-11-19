@@ -355,10 +355,11 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 	// Draw
 	Mat track = imread("/home/cvml1/Code/CV/discretized_track_h75_v4.png", CV_LOAD_IMAGE_COLOR);
     	Mat output = Mat(ppm_height, ppm_width, CV_8UC3, shm->data);
-	add(track, output, output);
+	addWeighted(output, 0.8, track, 0.2, 0, output);
 	drawKeypoints(output, keypoints, output, Scalar(255, 0, 0), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-	Centroid c = centroids_list[camera_loc->centroid];
-	circle(output, Point(c.get_x(), c.get_y()), 5, Scalar(0, 255, 0), -1);
+	Centroid cent = centroids_list[c];
+	circle(output, Point(cent.get_x(), cent.get_y()), 8, Scalar(255, 0, 0), -1);
+	circle(output, Point(camera_loc->x, camera_loc->y), 5, Scalar(255, 100, 255), -1);
     	cvtColor(output, output, COLOR_BGR2RGB);
 	// Write
 	char filename[256];

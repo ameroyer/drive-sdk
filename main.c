@@ -110,7 +110,7 @@ void* update_camera_loc(void* aux) {
 
     //Init structures
     init_blob_detector();
-    init_centroids_list("CV/centroids_h100_v3.txt", verbose);
+    init_centroids_list("CV/centroids_h75_v4.txt", verbose);
 
     camera_obst = (camera_obst_localization_t*) malloc(sizeof(camera_obst_localization_t));
     camera_obst->total = args->n_obst;
@@ -258,11 +258,11 @@ int main(int argc, char *argv[]) {
     /*
      * Hyper parameters
      */
-    float camera_update = 0.05; // Update of the camera picture, in percent of seconds
+    float camera_update = 0.04; // Update of the camera picture, in percent of seconds
     float control_update = 0.5; // Update of the vehicle action, `` `` ``
     float background_update = 5; // Update of the background, `` `` ``
     int background_start = 20;  // Index at which the background computation starts
-    int background_history = 15; // Number of images to use for median computation
+    int background_history = 10; // Number of images to use for median computation
     int nlap = 5; // Number of laps before the car stops
     // training paramters
     int training = 0;
@@ -290,6 +290,7 @@ int main(int argc, char *argv[]) {
     /*
      * Load thread for camera update and processing
      */
+    gettimeofday(&lapstarttime, NULL);
     struct arg_struct camera_args = {car_color, 1000 * camera_update, 1000 * background_update, background_start, background_history, opponents, argc > 4};
     int ret = pthread_create (&camera, 0, update_camera_loc,  &camera_args);
 
@@ -310,7 +311,6 @@ int main(int argc, char *argv[]) {
     float laptime=-1.;
     float totaltime = 0.;
     float minlaptime = 50.;
-    gettimeofday(&lapstarttime, NULL);
     //float epsilon = 0.0001;
     //float previous_camera_loc[2] = {camera_loc->x, camera_loc->y};
 
