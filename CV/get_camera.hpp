@@ -10,7 +10,7 @@ extern "C" {
     /**
      * Camera image type
      */
-    #define IMAGE_SIZE 1920*1200*3
+#define IMAGE_SIZE 1920*1200*3
     typedef struct {
 	unsigned char data[IMAGE_SIZE];
 	long count;
@@ -23,7 +23,7 @@ extern "C" {
     typedef struct camera_localization {
 	float x ;    /// x coordinate
 	float y ;    /// y coordinate
-    int centroid;  // Index of corresponding discretized state
+	int centroid;  // Index of corresponding discretized state
 	float size; //blob diameter
 	float direction[2]; //Direction vector (ie new position - old position)
 	float speed;
@@ -38,12 +38,13 @@ extern "C" {
      */
     typedef struct camera_obstacles_localization {
 	float obst[5 * 3]; // 5 other cars at most, 3 fields by detected object (x, y, ray)
-    int centroids[5]; // Corresponding discretized states
+	int centroids[5]; // Corresponding discretized states
 	int update_time ; /// Last update time (is increased every time we get an update from the car)
 	int found;
 	int total;
     } camera_obst_localization_t
     ;
+
     extern struct timeval lapstarttime;
     extern camera_localization_t* camera_loc;
     extern camera_obst_localization_t* camera_obst;
@@ -75,17 +76,8 @@ extern "C" {
     /**
      * Substract two camera images
      */
-    void sub(shared_struct* im1, shared_struct* im2, shared_struct* result);
-
-    /**
-     * Substract two camera images with additional binary thresholding
-     */
-    void sub_thres(shared_struct* im1, shared_struct* im2, shared_struct* result, int threshold);
-
-     /*
-     * Substract two camera images with additional threhsolding only for minimum values
-     */
-    void sub_thres_min(shared_struct* im1, shared_struct* im2, shared_struct* result, int threshold);
+    void sub(shared_struct* im, shared_struct* bg, shared_struct* result, int min);
+    void sub_pos(shared_struct* im, shared_struct* bg, shared_struct* result, int min);
 
     /**
      * Export image in a readable PPM file
@@ -103,4 +95,3 @@ extern "C" {
 #endif
 
 #endif
-

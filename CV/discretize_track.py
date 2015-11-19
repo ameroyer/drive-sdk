@@ -14,12 +14,6 @@ def dist(x1, y1, x2, y2):
     """
     return np.sqrt((y2 - y1)**2 + (x2 - x1)**2)
 
-def leng(x1,y1):
-    """
-    Return length of vector (x1, y1) 
-    """
-    return np.sqrt((y1)**2 + (x1)**2)
-
 
 def get_normal(x1, y1, x2, y2):
     """
@@ -44,6 +38,7 @@ def scalar(x1, y1, x2, y2):
     Return scalar product between vectors (x1, y1) and (x2, y2)
     """
     return x1 * x2 + y1 * y2
+
 
 def get_cosine(x1, y1, x2, y2):
     return scalar(x1, y1, x2, y2) / (dist(0, 0, x1, y1) * dist(0, 0, x2, y2))
@@ -92,14 +87,14 @@ def get_isobarycenter(pts):
     xg = np.sum([ (p[0] + pts[(i + 1) % len(pts)][0]) * (p[0] * pts[(i + 1) % len(pts)][1] - pts[(i + 1) % len(pts)][0] * p[1]) for i, p in enumerate(pts)]) / (6 * area)
     yg = np.sum([ (p[1] + pts[(i + 1) % len(pts)][1]) * (p[0] * pts[(i + 1) % len(pts)][1] - pts[(i + 1) % len(pts)][0] * p[1]) for i, p in enumerate(pts)]) / (6 * area)
     return xg, yg
-        
-        
+
+
 if __name__ == "__main__":
 
     ##### 1. Get the track mask
 
     # Load Image
-    image = cv2.imread('/home/cvml1/Code/Images/default_background.ppm') 
+    image = cv2.imread('/home/cvml1/Code/Images/default_background.ppm')
     mask = np.zeros_like(image)
 
     print "Extract track mask"
@@ -145,10 +140,10 @@ if __name__ == "__main__":
         dh = int(sys.argv[1])
     if len(sys.argv) > 2:
         dv = int(sys.argv[2])
-    
+
     inside = [x[0] for x in tracks.itervalues() if not x[2]][0]
     outside = [x[0] for x in tracks.itervalues() if x[2]][0]
-    
+
     vsegments = []
     indx_out, indx_in = 0, 0
     x_out, y_out = outside[indx_out][0] # Current point on the outside track
@@ -196,7 +191,7 @@ if __name__ == "__main__":
             indx_out += 1
             if indx_out >= len(outside):
                 break
-            x, y = outside[indx_out][0] 
+            x, y = outside[indx_out][0]
             diff = dist(x, y, x_out, y_out)
             # If above delta, find best point
             if distance + diff > dh:
@@ -208,7 +203,7 @@ if __name__ == "__main__":
                 x_out, y_out = x, y
 
 
-    # Find the horizontal segments and compute the parts centroids
+    # Find the horizontal segments and compute the centroids
     centroids = []
     previous = [0] * (dv + 1)
     first = [0] * (dv + 1)
@@ -218,53 +213,56 @@ if __name__ == "__main__":
     vsegments.append(vsegments[0])
     for i, (x1, y1, xin1, yin1) in enumerate(vsegments):
         d = dist(x1, y1, xin1, yin1)
+        # Load neighbouring segments
         x2, y2, xin2, yin2 = vsegments[(i - 1) % len(vsegments)]
         x3, y3, xin3, yin3 = vsegments[(i - 2) % len(vsegments)]
         x0, y0, xin0, yin0 = vsegments[(i + 1) % len(vsegments)]
         top = [(x1, y1), (x2, y2)]
+
         for j in xrange(dv + 1):
             # Compute intersection on the vertical segment
             p, q = x1 + j * d /dv * (xin1 - x1) / d, y1 + j * d / dv * (yin1 - y1) / d
             if j == dv:
                 p, q = xin1, yin1
-            bottom = [previous[j], (p, q)]            
+            bottom = [previous[j], (p, q)]
             cv2.circle(mask,(int(p),int(q)), 3, (255, 0, 0), -2)
             if i == 0:
                 first[j] = (p, q)
             else:
                 cv2.line(mask, (int(p), int(q)), (int(previous[j][0]), int(previous[j][1])), (255, 0, 0), 2)
+                # Compute centroid
                 if j != 0 and i != 0:
-                    #print dist(xin1 - x1, yin1 - y1, xin2 - x2, yin2 - y2)
                     xg, yg = get_isobarycenter(top + bottom)
-                    #curv = get_curvature(x2, y2, xin2, yin2) #* abs(scalar(xin1 - x1, yin1 - y1, xin2 - x2, yin2 - y2)) / dist(xin1 - x1, yin1 - y1, xin2 - x2, yin2 - y2)
-                    scalarpiece=scalar(x1-xin1,y1-yin1,x2-xin2,y2-yin2)/(leng(x1-xin1,y1-yin1)*leng(x2-xin2,y2-yin2))
-                    scalarnextcw=scalar(x3-xin3,y3-yin3,x2-xin2,y2-yin2)/(leng(x3-xin3,y3-yin3)*leng(x2-xin2,y2-yin2))
-                    scalarbeforecw=scalar(x1-xin1,y1-yin1,x0-xin0,y0-yin0)/(leng(x1-xin1,y1-yin1)*leng(x0-xin0,y0-yin0))
-                    sprods=min(scalarpiece,scalarnextcw,scalarbeforecw)
-                    curv=0
-                    if sprods < 0.99:
-                       curv=0.5
-                    if sprods < 0.95:
-                       curv=1
-                    print(curv)
-                    centroids.append([(xg, yg), i - 1, j - 1, curv, 0]) #centroid, vertical id, horizontal id, curvature, startline
-                    # Compute distane to start line 
+
+                    # Compute distane to start line
                     d = dist(xg, yg, startline_pixel[0], startline_pixel[1])
                     if d < closest:
                         closest = d
                         startline = i - 1
-                    cv2.circle(mask,(int(xg),int(yg)), 3, (0, 255*curv, 0) if i != 36 else  (0, 0, 255), -2)
+
+                    # Compute curvature
+                    #curv = get_curvature(x2, y2, xin2, yin2) #* abs(scalar(xin1 - x1, yin1 - y1, xin2 - x2, yin2 - y2)) / dist(xin1 - x1, yin1 - y1, xin2 - x2, yin2 - y2)
+                    scalarpiece = get_cosine(x1 - xin1, y1 - yin1, x2 - xin2, y2 - yin2)
+                    scalarnextcw = get_cosine(x3 - xin3, y3 - yin3, x2 - xin2, y2 - yin2)
+                    scalarbeforecw = get_cosine(x1 - xin1, y1 - yin1, x0 - xin0, y0 - yin0)
+                    sprods = min(scalarpiece, scalarnextcw, scalarbeforecw)
+                    curv=0
+                    if sprods < 0.99:
+                       curv = 0.5
+                    if sprods < 0.95:
+                       curv = 1
+                    centroids.append([(xg, yg), i - 1, j - 1, curv, 0])
+                    cv2.circle(mask,(int(xg),int(yg)), 3, (0, 255*curv, 0), -2)
             top = [bottom[1], bottom[0]]
             previous[j] = (p, q)
 
-    # Set startline
+    # Set startline to last item in list
     for i, x in enumerate(centroids):
         if x[1] == startline:
-            x[-1] = 1
-	    centroids[i+1][-1] = 1
-	    centroids[i+2][-1] = 1
+            for j in xrange(dv):
+                centroids[i + j][-1] = 1
 	    break
-    centroids = centroids[i:] + centroids[:i]
+    centroids = centroids[i + dv:] + centroids[:i + dv]
 
     # Save
     with open("centroids_h%d_v%d.txt" %(dh, dv), "w") as f:

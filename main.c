@@ -31,6 +31,7 @@
 #define KBOLD  "\x1B[1m"
 #define RESET "\033[0m"
 
+
 /**
  * Global variables
  */
@@ -44,6 +45,8 @@ camera_obst_localization_t* camera_obst;
 shared_struct* background;
 unsigned char** input_median;
 struct timeval lapstarttime;
+
+
 
 /**
  * Handle keyboard interrupts
@@ -61,8 +64,7 @@ static void intHandler(int sig) {
 void print_loc(AnkiHandle h){
     localization_t loc;
     loc = anki_s_get_localization(h);
-    printf(KBLU "[Loc]" RESET " segm: %03x subsegm: %03x clock-wise: %i last-update: %i\n",
-	   loc.segm, loc.subsegm, loc.is_clockwise, loc.update_time);
+    printf(KBLU "[Loc]" RESET " segm: %03x subsegm: %03x clock-wise: %i last-update: %i\n", loc.segm, loc.subsegm, loc.is_clockwise, loc.update_time);
 }
 
 
@@ -91,11 +93,12 @@ struct arg_struct {
     int n_obst;            //nbr  of opponents on the track
     int verbose;           // 0-1: set verbosity level
 };
-    
+
 
 
 // Main function run on the camera detection thread
 void* update_camera_loc(void* aux) {
+
     // Read arguments
     struct arg_struct *args = (struct arg_struct *)aux;
     const char* car_color = args->vehicle_color;
@@ -108,17 +111,20 @@ void* update_camera_loc(void* aux) {
     //Init structures
     init_blob_detector();
     init_centroids_list("CV/centroids_h100_v3.txt", verbose);
+
     camera_obst = (camera_obst_localization_t*) malloc(sizeof(camera_obst_localization_t));
     camera_obst->total = args->n_obst;
+
     camera_loc = (camera_localization_t*) malloc(sizeof(camera_localization_t));
-    camera_loc->centroid=0;
     camera_loc->x = 850;
     camera_loc->y = 50;
-    camera_loc->update_time = 0;
-    camera_loc ->speed = 1.;
     camera_loc->size = 0;
+    camera_loc->speed = 1.;
     camera_loc->direction[0] = 1;
     camera_loc->direction[1] = 0;
+    camera_loc->centroid=0;
+    camera_loc->update_time = 0;
+
     input_median = (unsigned char**) malloc(sizeof(unsigned char*) * bg_history);
     int i;
     for (i = 0; i < bg_history; i++) {
@@ -138,10 +144,11 @@ void* update_camera_loc(void* aux) {
     // Load background
     background = (shared_struct*) malloc(sizeof(shared_struct));
     background->count = 0;
-    FILE *f = fopen("/home/cvml1/Code/Images/default_background.txt", "rb");
-    fread(background->data, IMAGE_SIZE, 1, f);
-    fclose(f);
-    //memcpy(background->data, shm->data, IMAGE_SIZE);
+    //FILE *f = fopen("/home/cvml1/Code/Images/default_background.txt", "rb");
+    //fread(background->data, IMAGE_SIZE, 1, f);
+    //fclose(f);
+    memcpy(background->data, shm->data, IMAGE_SIZE);
+
 
     // Additional Paramaters
     camera_index = 0;
@@ -154,11 +161,6 @@ void* update_camera_loc(void* aux) {
      * Update location until receiving exit signal
      */
     while (!exit_signal && kbint) {
-	// DEBUG
-	if (verbose) {
-	    fprintf(stderr, "Index: %d - Next bg update: %d - Current saving index: %d\n", camera_index, next_bg_update  - next_bg_update%bg_update + bg_start, (next_bg_update + bg_history - bg_start) % bg_update);
-	}
-
 	// Update background if needed
 	if ((next_bg_update - bg_start) % bg_update  == 0) {
 	    next_bg_update += bg_update - bg_history;
@@ -170,9 +172,8 @@ void* update_camera_loc(void* aux) {
 	}
 
 	// Compute differential image in temp and update location
-	camera_index += 1;
-	temp->count = camera_index;
-	sub_thres_min(shm, background, temp, 80);
+	temp->count = camera_index + 1;
+	sub(shm, background, temp, 80);
 	get_camera_loc(temp, camera_index, verbose, car_color);
 
 	// If needed, save current image for next background update
@@ -180,11 +181,13 @@ void* update_camera_loc(void* aux) {
 	    memcpy(input_median[(next_bg_update + bg_history - bg_start) % bg_update], shm->data, IMAGE_SIZE);
 	    next_bg_update += 1;
 	}
+
+	// Next
+	camera_index += 1;
 	usleep(img_update * 1000);
     }
 
-
-    // Free and close
+    // Close
     if ( shmdt(shm) == -1) { perror("shmdt"); exit(1); }
     for (i = 0; i < bg_history; i++) {
 	free(input_median[i]);
@@ -244,6 +247,8 @@ const char* get_car_color(char* color) {
     }
 }
 
+
+
 /**
  * Main routine
  **/
@@ -258,7 +263,7 @@ int main(int argc, char *argv[]) {
     float background_update = 5; // Update of the background, `` `` ``
     int background_start = 20;  // Index at which the background computation starts
     int background_history = 15; // Number of images to use for median computation
-    int nlap = 5;
+    int nlap = 5; // Number of laps before the car stops
     // training paramters
     int training = 0;
     int nepisodes = 10;
@@ -268,7 +273,7 @@ int main(int argc, char *argv[]) {
      * Read parameters
      */
     if(argc<2){
-	fprintf(stderr, "usage: %s car-name [nbr of cars] [adaptater] [verbose]\n",argv[0]);
+	fprintf(stderr, "usage: %s car-name [nbr of opponents] [adaptater] [verbose]\n",argv[0]);
 	exit(0);
     }
     const char* adapter = "hci0";
@@ -283,10 +288,11 @@ int main(int argc, char *argv[]) {
     }
 
     /*
-     * Load thread to update picture every second and process it
+     * Load thread for camera update and processing
      */
     struct arg_struct camera_args = {car_color, 1000 * camera_update, 1000 * background_update, background_start, background_history, opponents, argc > 4};
     int ret = pthread_create (&camera, 0, update_camera_loc,  &camera_args);
+
 
     /*
      * Control vehicle's behaviour (run until ctrl-c)
@@ -296,29 +302,29 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Attempting connection to %s\n", car_id);
     h = anki_s_init(adapter, car_id, argc>4);
     fprintf(stderr, "Connection successful\n");
-    
 
     // Additional parameters
     run_index = 0;
     int res, lap;
     localization_t loc;
-    float epsilon = 0.0001;
-    float previous_camera_loc[2] = {camera_loc->x, camera_loc->y};
     float laptime=-1.;
     float totaltime = 0.;
     float minlaptime = 50.;
     gettimeofday(&lapstarttime, NULL);
+    //float epsilon = 0.0001;
+    //float previous_camera_loc[2] = {camera_loc->x, camera_loc->y};
 
     /*
      * 1. First: normal (non trainng) mode
      */
-    if (!training) {	
-	// Initialize a policy 
+    if (!training) {
+	// Initialize a policy
 	init_det_one_car_policy();
+
 	// Start
-	res = anki_s_set_speed(h, 800, 20000);
-	camera_loc->real_speed = 800;
-	// Run until ctrl-C
+	res = anki_s_set_speed(h, 1500, 5000);
+	camera_loc->real_speed = 1500;
+
 	while (kbint && !res && nlap > 0) {
 	    // Display
 	    print_loc(h);
@@ -326,30 +332,28 @@ int main(int argc, char *argv[]) {
 	    printf("\n");
 
 	    // Check if lap finished
-	    // TODO: parameters from min,maxid of centroids
 	    laptime = is_car_finished();
 	    if (laptime > 1.){
 		nlap -= 1;
-		fprintf(stderr, "lap time: %.3f\n\n",(laptime));	
+		fprintf(stderr, "    > Lap time: %.3f\n\n", laptime);
 		totaltime += laptime;
-	
 		if (laptime < minlaptime) {
-			minlaptime = laptime;
-		}	
+		    minlaptime = laptime;
+		}
 	    }
 
 	    // Check direction and perform uturn if false
 	    loc = anki_s_get_localization(h);
 	    if(loc.update_time > 0 && !loc.is_clockwise){
-		anki_s_uturn(h);	
-		fprintf(stderr, "U-turn\n");	
+		anki_s_uturn(h);
+		fprintf(stderr, "U-turn\n");
 	    }
-	
+
 	    // Check if car stands still (no update of loc information) and set speed randomly  if so
 	    //if(camera_loc->success && abs(previous_camera_loc[0] - camera_loc->x) < epsilon && abs(previous_camera_loc[1] - camera_loc->y) < epsilon){
-		//anki_s_set_speed(h,500 + 1000 * ((double) rand() / (RAND_MAX)), 20000);
-	//	fprintf(stderr, "Still\n");
-	  //  }
+	    //anki_s_set_speed(h,500 + 1000 * ((double) rand() / (RAND_MAX)), 20000);
+	    //	fprintf(stderr, "Still\n");
+	    //  }
 
 	    // Apply policy decsion
 	    res = apply_policy(h, *camera_loc);
@@ -360,8 +364,8 @@ int main(int argc, char *argv[]) {
 
 	    // Next loop
 	    run_index += 1;
-	    previous_camera_loc[0] = camera_loc->x;
-	    previous_camera_loc[1] = camera_loc->y;
+	    //previous_camera_loc[0] = camera_loc->x;
+	    //previous_camera_loc[1] = camera_loc->y;
 	    usleep(control_update * 1000000);
 	}
     }
@@ -374,45 +378,37 @@ int main(int argc, char *argv[]) {
 	res = anki_s_set_speed(h, 400, 20000);
 	camera_loc->real_speed = 400;
 	int episode, step;
-	    for (episode; episode < nepisodes; episode++) {
-		for (step = 0; step < nsteps; step++) {
-		    // Display
-		    print_loc(h);
-		    print_camera_loc();
-		    printf("\n");
-
-	
-		    // Check direction and perform uturn if false
-		    loc = anki_s_get_localization(h);
-		    if(loc.update_time > 0 && !loc.is_clockwise){
-			anki_s_uturn(h);	
-			fprintf(stderr, "U-turn\n");	
-		    }
-	
-		    // Check if car stands still (no update of loc information) and set speed randomly  if so
-		    if(camera_loc->success && abs(previous_camera_loc[0] - camera_loc->x) < epsilon && abs(previous_camera_loc[1] - camera_loc->y) < epsilon){
-			anki_s_set_speed(h,500 + 1000 * ((double) rand() / (RAND_MAX)), 20000);
-			fprintf(stderr, "Still\n");
-		    }
-	
-		    // Apply policy decsion
-		    res = apply_policy_trainingmode(h, *camera_loc, 0.5, 0.1);
-		    if (res > 0) { // changed speed
-			camera_loc->real_speed = res;
-		    }
+	for (episode; episode < nepisodes; episode++) {
+	    for (step = 0; step < nsteps; step++) {
+		// Display
+		print_loc(h);
+		print_camera_loc();
+		printf("\n");
 
 
-		    // Next loop
-		    run_index += 1;
-		    previous_camera_loc[0] = camera_loc->x;
-		    previous_camera_loc[1] = camera_loc->y;
-		    usleep(control_update * 1000000);
-
+		// Check direction and perform uturn if false
+		loc = anki_s_get_localization(h);
+		if(loc.update_time > 0 && !loc.is_clockwise){
+		    anki_s_uturn(h);
+		    fprintf(stderr, "U-turn\n");
 		}
-		//save run
-		export_run();
-		reset_run();
+
+		// Apply policy decsion
+		res = apply_policy_trainingmode(h, *camera_loc, 0.5, 0.1);
+		if (res > 0) { // changed speed
+		    camera_loc->real_speed = res;
+		}
+
+
+		// Next loop
+		run_index += 1;
+		usleep(control_update * 1000000);
+
 	    }
+	    //save run
+	    export_run();
+	    reset_run();
+	}
 	//save policy
 	export_policy();
     }
@@ -421,13 +417,12 @@ int main(int argc, char *argv[]) {
     /*
      * Close and disconnect
      */
-    printf("Time elapsed: %f\n", totaltime);
-    printf("Minimum lap time: %f\n", minlaptime);
-    anki_s_close(h);
+    printf("\n   > Total time elapsed: %f\n", totaltime);
+    printf("   > Minimum lap time: %f\n", minlaptime);
     exit_signal = 1;
+    anki_s_close(h);
     pthread_join(camera, NULL);
     free(background);
     free(camera_loc);
     return 0;
 }
-
