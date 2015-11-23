@@ -312,7 +312,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 	h = get_mean_hue(shm->data, (int) (*it).pt.x, (int) (*it).pt.y, (int) (0.5 * (*it).size));
 
 	// If no opponents, or if hue matches our car, take this centroid
-	if (!camera_obst->total || !strcmp(get_car_from_hue(h), car_color)) {
+	if (camera_obst->total == 0 || !strcmp(get_car_from_hue(h), car_color)) {
 	    // Update speed and direction
 	    camera_loc->direction[0] = ((*it).pt.x - camera_loc-> x);
 	    camera_loc->direction[1] = ((*it).pt.y - camera_loc-> y);

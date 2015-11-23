@@ -266,8 +266,10 @@ int main(int argc, char *argv[]) {
     int nlap = 5; // Number of laps before the car stops
     // training paramters
     int training = 0;
-    int nepisodes = 10;
-    int nsteps = 20;
+    //int training = 1;
+    int nepisodes = 1;
+    int nsteps = 100;
+    //control_update = 0.3;
 
     /*
      * Read parameters
@@ -357,8 +359,8 @@ int main(int argc, char *argv[]) {
 
 	    // Apply policy decsion
 	    res = apply_policy(h, *camera_loc);
-	    if (res > 0) { // changed speed
-		camera_loc->real_speed = res;
+	    if (res < 0) { // changed speed
+		camera_loc->real_speed = - res;
 		res = 0;
 	    }
 
@@ -373,18 +375,18 @@ int main(int argc, char *argv[]) {
      * 2. Or: training mode
      */
     else {
-	init_totrain_policy();
+	init_totrain_onecar_policy();
+	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
 	// Start
-	res = anki_s_set_speed(h, 400, 20000);
-	camera_loc->real_speed = 400;
+	res = anki_s_set_speed(h, 1000, 20000);
+	camera_loc->real_speed = 1000;
 	int episode, step;
-	for (episode; episode < nepisodes; episode++) {
+	for (episode = 0; episode < nepisodes; episode++) {
 	    for (step = 0; step < nsteps; step++) {
 		// Display
 		print_loc(h);
 		print_camera_loc();
 		printf("\n");
-
 
 		// Check direction and perform uturn if false
 		loc = anki_s_get_localization(h);
@@ -395,10 +397,10 @@ int main(int argc, char *argv[]) {
 
 		// Apply policy decsion
 		res = apply_policy_trainingmode(h, *camera_loc, 0.5, 0.1);
-		if (res > 0) { // changed speed
-		    camera_loc->real_speed = res;
+		if (res < 0) { // changed speed
+		    camera_loc->real_speed = - res;
+		    res = 0;
 		}
-
 
 		// Next loop
 		run_index += 1;
@@ -406,11 +408,11 @@ int main(int argc, char *argv[]) {
 
 	    }
 	    //save run
-	    export_run();
+	    export_run(episode, "/home/cvml1/Code/TrainRuns/");
 	    reset_run();
 	}
 	//save policy
-	export_policy();
+	export_policy(episode,  "/home/cvml1/Code/TrainRuns/");
     }
 
 

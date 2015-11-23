@@ -100,7 +100,7 @@ float Policy::get_score(State s, Action a) {
 Action DetOneCarPolicy::get_next_action(State s) {
 
     // Do nothing if last action
-    int step = 4;
+    int step = 2;
     float previous = centroids_list[(s.get_carid() + 4 * step)% centroids_list.size()].get_stra();
     float after = centroids_list[(centroids_list.size() + s.get_carid() - 4 * step)% centroids_list.size()].get_stra();
     float now = s.get_stra();

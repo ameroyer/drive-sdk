@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <map>
-#include <map>
+#include <sstream>
 
 
 /*
@@ -75,8 +75,15 @@ public:
 
     //Ovveride < to use State as a key
     bool operator <(const State& rhs) const {
-	return carid < rhs.carid && speed < rhs.speed;
+	return carid < rhs.carid || ( carid == rhs.carid && speed < rhs.speed);
     }
+
+    // String representation
+    std::string to_string() const {
+	std::ostringstream ss;
+	ss << "State in centroid " << carid << " with speed " << speed;
+	return ss.str();
+    };
 
 private:
     Centroid car;
@@ -117,6 +124,10 @@ public:
 	type = 2;
     };
 
+    float get_speed() {return speed;};
+    int get_type() {return type;};
+    float get_offset() {return offset;};
+
     int apply(AnkiHandle h) {
 	if (type == 0) {
 	    std::cerr << "DEBUG: No action\n";
@@ -124,17 +135,31 @@ public:
 	} else if (type == 1) {
 	    anki_s_set_speed(h, speed, accel);
 	    std::cerr << "DEBUG: Set speed " << speed << "\n";
-	    return speed;
+	    return - speed;
 	} else {
-	    anki_s_change_lane(h, offset, speed, accel);
 	    std::cout << "DEBUG: Change lane with offset " << offset << "\n";
-	    return 0;
+	    return anki_s_change_lane(h, offset, speed, accel);
 	}
+    };
+
+    // String representation
+    std::string to_string() const{
+	std::ostringstream ss;
+	if (type == 0) {
+	    ss << "No Action";
+	} else if (type == 1) {
+	    ss << "Action: Change speed to " << speed << " with acceleration " << accel;
+	} else if (type == 2 && offset < 0) {
+	    ss << "Action: Change lane to INSIDE with hspeed" << speed << " with acceleration " << accel;
+	} else {
+	    ss << "Action: Change lane to OUTSIDE with hspeed" << speed << " with acceleration " << accel;
+	}
+	return ss.str();
     };
 
     //Ovveride < to use Actione as a key
     bool operator <(const Action& rhs) const {
-        return (type < rhs.type) || (type == 1 && rhs.type == 1 && speed < rhs.speed && accel < rhs.accel) || (type == 2 && rhs.type == 2 && speed < rhs.speed && accel < rhs.accel && offset < rhs.offset);
+        return (type < rhs.type) || (type == 1 && rhs.type == 1 && (speed < rhs.speed || (speed == rhs.speed && accel < rhs.accel))) || (type == 2 && rhs.type == 2 && (speed < rhs.speed || (speed == rhs.speed && accel < rhs.accel) || (speed == rhs.speed && accel == rhs.accel && offset < rhs.offset)));
     }
 };
 
@@ -151,6 +176,19 @@ public:
     float get_best_score(State s);
     void set_score(State s, Action a, float value);
     float get_score(State s, Action a);
+
+    // string representation
+    std::string to_string() {
+	std::ostringstream ss;
+	for(std::map<State, std::map<Action, float> >::iterator it = qscores.begin(); it != qscores.end(); it++) {
+	    ss << "- " << it->first.to_string() << "\n";
+	    for(std::map<Action, float>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++) {
+		ss << "   -> " << it2->first.to_string() << ". Q-value = " << it2->second << "\n";
+	    }
+	    ss << "\n";
+	}
+	return ss.str();
+    };
 };
 
 
