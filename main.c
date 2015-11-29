@@ -265,9 +265,9 @@ int main(int argc, char *argv[]) {
     int background_history = 10; // Number of images to use for median computation
     int nlap = 5; // Number of laps before the car stops
     // training paramters
-    int training = 0;
+    int training = 1;
     //int training = 1;
-    int nepisodes = 1;
+    int nepisodes = 100;
     int nsteps = 100;
     //control_update = 0.3;
 
@@ -382,7 +382,9 @@ int main(int argc, char *argv[]) {
 	camera_loc->real_speed = 1000;
 	int episode, step;
 	for (episode = 0; episode < nepisodes; episode++) {
+		fprintf(stderr, "EPISODE %d \n",episode);
 	    for (step = 0; step < nsteps; step++) {
+		fprintf(stderr, "STEP %d \n ",step);
 		// Display
 		print_loc(h);
 		print_camera_loc();
@@ -401,6 +403,18 @@ int main(int argc, char *argv[]) {
 		    camera_loc->real_speed = - res;
 		    res = 0;
 		}
+		
+		// Check if lap finished
+	    laptime = is_car_finished();
+	    if (laptime > 2.){
+			nlap -= 1;
+			fprintf(stderr, "    > Lap time: %.3f\n\n", laptime);
+			totaltime += laptime;
+			if (laptime < minlaptime) {
+				minlaptime = laptime;
+			}
+			break;
+	    }
 
 		// Next loop
 		run_index += 1;

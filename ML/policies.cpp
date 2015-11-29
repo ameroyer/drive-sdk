@@ -152,6 +152,7 @@ int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learn
     //Choose best action (greedy)
     //TODO epsilon greedy
     previous_action = pi.get_next_action(s);
+    previous_state = s;
     run_actions.push_back(previous_action);
     return previous_action.apply(h);
 }

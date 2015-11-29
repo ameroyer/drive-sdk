@@ -341,7 +341,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     // Set new centroid
     c = get_centroid(camera_loc->x, camera_loc->y);
     if  (c > floor(centroids_list.size() * 0.75) && camera_loc->centroid < floor(centroids_list.size() * 0.25)) {
-	car_finished();
+		car_finished();
     }
 
     // Update
