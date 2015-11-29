@@ -36,6 +36,28 @@ float Centroid::get_distance_squared(float a, float b) {
 
 std::vector<Centroid> centroids_list;
 
+void get_centroid_direction(int id, float direction[2], int clockwise) {
+    Centroid centroid = centroids_list[id];
+    Centroid nxt_centroid;
+    if (clockwise) {
+	nxt_centroid = centroids_list[id - 4];
+    } else {
+	nxt_centroid = centroids_list[id + 4];
+    }
+    float dst = sqrt(centroid.get_distance_squared(nxt_centroid.get_x(), nxt_centroid.get_y()));
+    direction[0] = (nxt_centroid.get_x() - centroid.get_x()) / dst;
+    direction[1] = (nxt_centroid.get_y() - centroid.get_y()) / dst;
+}
+
+float get_distance_vseg(Centroid b, Centroid c) {
+    // if cross start line
+    if ((c.get_id() > floor(centroids_list.size() * 0.75) && b.get_id() < floor(centroids_list.size() * 0.25)) || (b.get_id() > floor(centroids_list.size() * 0.75) && c.get_id() < floor(centroids_list.size() * 0.25))) {	    
+	return abs(c.get_id() - b.get_id() + centroids_list.size()) / 4 + 1;
+    } else {
+	return abs(c.get_id() - b.get_id()) / 4 + 1;
+    }
+}
+
 // State
 Centroid State::get_car() {
     return car;

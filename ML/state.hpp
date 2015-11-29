@@ -5,6 +5,8 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <math.h>
+#include <cmath>
 
 
 /*
@@ -36,6 +38,7 @@ public:
     // Get distance between centroid and point (a, b)
     float get_distance_squared(float a, float b);
 
+
 private:
     int id;
     float x;
@@ -52,7 +55,10 @@ private:
  */
 extern std::vector<Centroid> centroids_list;
 
+//## TODO + 4 as a parameter and clockwise as a parameter of main
+void get_centroid_direction(int id, float direction[2], int clockwise);
 
+float get_distance_vseg(Centroid b, Centroid c);
 /*
  * Class describing a state in the policy
  */
@@ -138,7 +144,9 @@ public:
 	    return - speed;
 	} else {
 	    std::cout << "DEBUG: Change lane with offset " << offset << "\n";
-	    return anki_s_change_lane(h, offset, speed, accel);
+	    int a = anki_s_change_lane(h, offset, speed, accel);
+	    int b = anki_s_cancel_lane_change(h);
+	    return (a + b) ;
 	}
     };
 

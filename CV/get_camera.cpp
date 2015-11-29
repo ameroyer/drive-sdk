@@ -41,6 +41,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include "../ML/state.hpp"
+#include <math.h>
 
 using namespace cv;
 
@@ -313,10 +314,8 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 
 	// If no opponents, or if hue matches our car, take this centroid
 	if (camera_obst->total == 0 || !strcmp(get_car_from_hue(h), car_color)) {
-	    // Update speed and direction
-	    camera_loc->direction[0] = ((*it).pt.x - camera_loc-> x);
-	    camera_loc->direction[1] = ((*it).pt.y - camera_loc-> y);
-	    camera_loc->speed = 1. / (index - camera_loc->update_time);
+	    // Update speed
+	    camera_loc->speed = sqrt( pow((*it).pt.x - camera_loc-> x, 2) + pow((*it).pt.y - camera_loc-> y, 2))  / (index - camera_loc->update_time);
 	    // Update position
 	    camera_loc->x = (*it).pt.x;
 	    camera_loc->y = (*it).pt.y;
@@ -344,6 +343,16 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 		car_finished();
     }
 
+    // Check clockwise direction 
+    if ( (c < camera_loc->centroid - 3 && camera_loc->centroid > floor(centroids_list.size() * 0.75) &&  c < floor(centroids_list.size() * 0.25)) || (c > camera_loc->centroid + 3 && !(camera_loc->centroid > floor(centroids_list.size() * 0.75) &&  c < floor(centroids_list.size() * 0.25)) )) {
+	camera_loc->is_clockwise = 0;
+    } else {
+	camera_loc->is_clockwise = 1;
+    }
+
+    // Set new direction based on centroids
+    get_centroid_direction(c, camera_loc->direction, 1);
+
     // Update
     camera_loc->centroid = c;
     camera_obst->found = obst;
@@ -360,6 +369,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 	Centroid cent = centroids_list[c];
 	circle(output, Point(cent.get_x(), cent.get_y()), 8, Scalar(255, 0, 0), -1);
 	circle(output, Point(camera_loc->x, camera_loc->y), 5, Scalar(255, 100, 255), -1);
+	line(output, Point(camera_loc->x, camera_loc->y), Point(camera_loc->x + camera_loc->speed * camera_loc->direction[0], camera_loc->y + camera_loc->speed * camera_loc->direction[1]), Scalar(255, 100, 255), 2);
     	cvtColor(output, output, COLOR_BGR2RGB);
 	// Write
 	char filename[256];

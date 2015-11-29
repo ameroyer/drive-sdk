@@ -105,48 +105,53 @@ void init_totrain_onecar_policy() {
 	actions_list.push_back(Action(offset_values[i], lanespeed, accel));
     }
 
-    // Set initial rewards for each action/state couple
+    // Set arbitray q-vqlues
     for(std::vector<Action>::iterator ita = actions_list.begin(); ita != actions_list.end(); ++ita) {
 	for(std::vector<State>::iterator its = states_list.begin(); its != states_list.end(); ++its) {
-
-	    //If straight part
-		if (its->get_stra() > 0.5) {
-			// Accelerate and going to inside is good
-			if ((ita->get_type() == 1 && ita->get_speed() > its->get_speed()) || (ita->get_type() == 2 && its->get_lane() < 3 && ita->get_offset() < 0)) {
-		    		pi.set_score(*its, *ita, +10.);
-			} else if ((ita->get_type() == 1 && ita->get_speed() <= its->get_speed()) || (ita->get_type() == 2 && its->get_lane() == 3))  {
-		    		pi.set_score(*its, *ita, -50.);
-			}
-			else {
-				pi.set_score(*its, *ita, 0.);
-			}
-		} // In curves
-		else  {
-			// Decelerate and going to middle
-			if ((ita->get_type() == 1 && ita->get_speed() < its->get_speed()) || (ita->get_type() == 2 && its->get_lane() > 2 && ita->get_offset() > 0)) {
-		    		pi.set_score(*its, *ita, +10.);
-			} else if ((ita->get_type() == 1 && ita->get_speed() >= its->get_speed()) || (ita->get_type() == 2 && its->get_lane() != 2 && ita->get_offset() != 0))  {
-		    		pi.set_score(*its, *ita, -50.);
-			}
-			else {
-				pi.set_score(*its, *ita, 0.);
-			}
-		} 
+	    pi.set_score(*its, *ita, 0.);
 	}
     }
 }
 
 
+// Define rewards for policy
+// R(s, a, t)
+float reward_onecar_policy(State s, Action a, State t) {
+
+    // Set fixed rewards for important checkpoints
+    //If straight part
+    if (s.get_stra() < 0.5 && t.get_stra() > 0.5) {
+	// Accelerate and going to inside is good
+	if ((a.get_type() == 1 && a.get_speed() > s.get_speed()) || (a.get_type() == 2 && s.get_lane() < 3 && a.get_offset() < 0)) {
+	    return + 100;
+	} else if ((a.get_type() == 1 && a.get_speed() <= s.get_speed()) || (a.get_type() == 2 && s.get_lane() == 3))  {
+	    return - 100;
+	}
+    } // In curves
+    else  {
+	// Decelerate and going to middle
+	if ((a.get_type() == 1 && a.get_speed() < s.get_speed()) || (a.get_type() == 2 && s.get_lane() > 2 && a.get_offset() > 0)) {
+	    return + 100;
+	} else if ((a.get_type() == 1 && a.get_speed() >= s.get_speed()) || (a.get_type() == 2 && s.get_lane() != 2 && a.get_offset() != 0))  {
+	    return - 100.;
+	}
+    } 
+
+    // Default is number of vertical segments travelled
+    return get_distance_vseg(s.get_car(), t.get_car());
+    
+}
+
 
 // Apply best/epsilon-best action and update policy based on previous state
-int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learning_rate, float epsilon) {
+int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learning_rate, float discount_factor, float epsilon) {
     // Get state
     State s(centroids_list[c.centroid], c.real_speed);
     run.push_back(s);
 
     //If not first state, update policy
     if (run.size() > 0) {
-	pi.set_score(previous_state, previous_action, pi.get_score(previous_state, previous_action) * (1. - learning_rate) + learning_rate * pi.get_best_score(s));
+	pi.set_score(previous_state, previous_action, pi.get_score(previous_state, previous_action) * (1. - learning_rate) + learning_rate * discount_factor * pi.get_best_score(s) + learning_rate * reward_onecar_policy(previous_state, previous_action, s));
     }
 
     //Choose best action (greedy)

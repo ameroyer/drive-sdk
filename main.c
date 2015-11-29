@@ -124,6 +124,7 @@ void* update_camera_loc(void* aux) {
     camera_loc->direction[1] = 0;
     camera_loc->centroid=0;
     camera_loc->update_time = 0;
+    camera_loc->is_clockwise = 1;
 
     input_median = (unsigned char**) malloc(sizeof(unsigned char*) * bg_history);
     int i;
@@ -265,8 +266,8 @@ int main(int argc, char *argv[]) {
     int background_history = 10; // Number of images to use for median computation
     int nlap = 5; // Number of laps before the car stops
     // training paramters
-    int training = 1;
-    //int training = 1;
+    int training = 0;//1;
+    //int training = 0;
     int nepisodes = 100;
     int nsteps = 100;
     //control_update = 0.3;
@@ -309,7 +310,7 @@ int main(int argc, char *argv[]) {
     // Additional parameters
     run_index = 0;
     int res, lap;
-    localization_t loc;
+    //localization_t loc;
     float laptime=-1.;
     float totaltime = 0.;
     float minlaptime = 50.;
@@ -345,8 +346,7 @@ int main(int argc, char *argv[]) {
 	    }
 
 	    // Check direction and perform uturn if false
-	    loc = anki_s_get_localization(h);
-	    if(loc.update_time > 0 && !loc.is_clockwise){
+	    if(!camera_loc->is_clockwise){
 		anki_s_uturn(h);
 		fprintf(stderr, "U-turn\n");
 	    }
@@ -391,30 +391,24 @@ int main(int argc, char *argv[]) {
 		printf("\n");
 
 		// Check direction and perform uturn if false
-		loc = anki_s_get_localization(h);
-		if(loc.update_time > 0 && !loc.is_clockwise){
+		if(!camera_loc->is_clockwise){
 		    anki_s_uturn(h);
 		    fprintf(stderr, "U-turn\n");
 		}
 
 		// Apply policy decsion
-		res = apply_policy_trainingmode(h, *camera_loc, 0.5, 0.1);
+		res = apply_policy_trainingmode(h, *camera_loc, 0.8, 0.8, 0.1);
 		if (res < 0) { // changed speed
 		    camera_loc->real_speed = - res;
 		    res = 0;
 		}
 		
 		// Check if lap finished
-	    laptime = is_car_finished();
-	    if (laptime > 2.){
-			nlap -= 1;
-			fprintf(stderr, "    > Lap time: %.3f\n\n", laptime);
-			totaltime += laptime;
-			if (laptime < minlaptime) {
-				minlaptime = laptime;
-			}
-			break;
-	    }
+		laptime = is_car_finished();
+		if (laptime > 2.){
+		    fprintf(stderr, "    > Lap time: %.3f\n\n", laptime);
+		    break;
+		}
 
 		// Next loop
 		run_index += 1;
