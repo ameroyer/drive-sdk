@@ -97,6 +97,16 @@ Action Policy::get_next_action(State s) {
     return best;
 }
 
+Action Policy::get_random_action(State s) {
+    int index = rand() % qscores[s].size();
+    for(std::map<Action, float>::iterator iterator = qscores[s].begin(); iterator != qscores[s].end(); iterator++) {
+	index -= 1;
+	if (index <= 0) {
+	   return iterator->first;
+	}
+    }
+}
+
 float Policy::get_best_score(State s) {
     float max = 0;
     for(std::map<Action, float>::iterator iterator = qscores[s].begin(); iterator != qscores[s].end(); iterator++) {
@@ -106,6 +116,7 @@ float Policy::get_best_score(State s) {
     }
     return max;
 }
+
 
 void Policy::set_score(State s, Action a, float value) {
     qscores[s][a] = value;

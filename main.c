@@ -266,9 +266,9 @@ int main(int argc, char *argv[]) {
     int background_history = 10; // Number of images to use for median computation
     int nlap = 5; // Number of laps before the car stops
     // training paramters
-    int training = 0;//1;
+    int training = 1;//1;
     //int training = 0;
-    int nepisodes = 100;
+    int nepisodes = 20;
     int nsteps = 100;
     //control_update = 0.3;
 
@@ -397,7 +397,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		// Apply policy decsion
-		res = apply_policy_trainingmode(h, *camera_loc, 0.8, 0.8, 0.1);
+		res = apply_policy_trainingmode(h, *camera_loc, 0.8, 0.5, 0.1);
 		if (res < 0) { // changed speed
 		    camera_loc->real_speed = - res;
 		    res = 0;
@@ -414,10 +414,17 @@ int main(int argc, char *argv[]) {
 		run_index += 1;
 		usleep(control_update * 1000000);
 
+		if (!kbint || res) {
+			break;
+		}
+
 	    }
 	    //save run
 	    export_run(episode, "/home/cvml1/Code/TrainRuns/");
 	    reset_run();
+	    if (!kbint || res) {
+		break;
+	    }
 	}
 	//save policy
 	export_policy(episode,  "/home/cvml1/Code/TrainRuns/");

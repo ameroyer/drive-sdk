@@ -181,6 +181,7 @@ private:
 public:
     Policy() {};
     Action get_next_action(State s);
+    Action get_random_action(State s);
     float get_best_score(State s);
     void set_score(State s, Action a, float value);
     float get_score(State s, Action a);
