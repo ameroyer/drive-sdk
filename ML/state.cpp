@@ -40,9 +40,9 @@ void get_centroid_direction(int id, float direction[2], int clockwise) {
     Centroid centroid = centroids_list[id];
     Centroid nxt_centroid;
     if (clockwise) {
-	nxt_centroid = centroids_list[id - 4];
+	nxt_centroid = centroids_list[(id - 4 + centroids_list.size()) % centroids_list.size()];
     } else {
-	nxt_centroid = centroids_list[id + 4];
+	nxt_centroid = centroids_list[(id + 4) % centroids_list.size()];
     }
     float dst = sqrt(centroid.get_distance_squared(nxt_centroid.get_x(), nxt_centroid.get_y()));
     direction[0] = (nxt_centroid.get_x() - centroid.get_x()) / dst;

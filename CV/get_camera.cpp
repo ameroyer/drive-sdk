@@ -344,14 +344,14 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     }
 
     // Check clockwise direction 
-    if ( (c < camera_loc->centroid - 3 && camera_loc->centroid > floor(centroids_list.size() * 0.75) &&  c < floor(centroids_list.size() * 0.25)) || (c > camera_loc->centroid + 3 && !(camera_loc->centroid > floor(centroids_list.size() * 0.75) &&  c < floor(centroids_list.size() * 0.25)) )) {
+    if ( (c < camera_loc->centroid - 3 && c > floor(centroids_list.size() * 0.75) &&  camera_loc->centroid < floor(centroids_list.size() * 0.25)) || (c > camera_loc->centroid + 3 && !(c > floor(centroids_list.size() * 0.75) &&  camera_loc->centroid < floor(centroids_list.size() * 0.25)) )) {
 	camera_loc->is_clockwise = 0;
     } else {
 	camera_loc->is_clockwise = 1;
     }
 
     // Set new direction based on centroids
-    get_centroid_direction(c, camera_loc->direction, 1);
+    get_centroid_direction(c, camera_loc->direction, camera_loc->is_clockwise);
 
     // Update
     camera_loc->centroid = c;
