@@ -13,13 +13,13 @@ extern "C" {
      * Apply policy to car given the state described by camera_localization c
      */
     int apply_policy(AnkiHandle h, camera_localization_t c);
-    int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learning_rate, float discount_factor, float epsilon);
+    int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learning_rate, float discount_factor, float epsilondecay);
 
     /*
      * Functions to store and load training results
      */
     void init_trained_policy(char* filename);
-    void init_totrain_onecar_policy();
+    void init_totrain_onecar_policy(float initepsilon);
     void reset_run();
     void export_run(int current_run, char* output_dir);
     void export_policy(int current_episode, char* output_dir);

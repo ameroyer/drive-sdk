@@ -269,7 +269,7 @@ int main(int argc, char *argv[]) {
     int training = 1;//1;
     //int training = 0;
     int nepisodes = 20;
-    int nsteps = 100;
+    int nsteps = 30;
     //control_update = 0.3;
 
     /*
@@ -375,7 +375,7 @@ int main(int argc, char *argv[]) {
      * 2. Or: training mode
      */
     else {
-	init_totrain_onecar_policy();
+	init_totrain_onecar_policy(0.9);
 	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
 	// Start
 	res = anki_s_set_speed(h, 1000, 20000);
@@ -397,7 +397,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		// Apply policy decsion
-		res = apply_policy_trainingmode(h, *camera_loc, 0.8, 0.5, 0.1);
+		res = apply_policy_trainingmode(h, *camera_loc, 0.8, 0.5, 0.8);
 		if (res < 0) { // changed speed
 		    camera_loc->real_speed = - res;
 		    res = 0;
@@ -426,8 +426,8 @@ int main(int argc, char *argv[]) {
 		break;
 	    }
 	}
-	//save policy
-	export_policy(episode,  "/home/cvml1/Code/TrainRuns/");
+	// Save policy
+	export_policy(nepisodes,  "/home/cvml1/Code/TrainRuns/");
     }
 
 
