@@ -407,6 +407,10 @@ int main(int argc, char *argv[]) {
 		laptime = is_car_finished();
 		if (laptime > 2.){
 		    fprintf(stderr, "    > Lap time: %.3f\n\n", laptime);
+		    totaltime += laptime;
+		    if (laptime < minlaptime) {
+		        minlaptime = laptime;
+		    }
 		    break;
 		}
 
