@@ -150,27 +150,35 @@ void init_totrain_onecar_policy(float initepsilon) {
 // R(s, a, t)
 float reward_onecar_policy(State s, Action a, State t) {
 
+    // Constraint  the car to stay in the track
+    if (a.get_type() == 2 && ( (a.get_offset() < 0 && s.get_lane() == 3) || (a.get_offset() > 0 && s.get_lane() == 0) ) ) {
+	return - 1000.;
+    }  
+    // Do not set speed to current speed (= useless)
+    else if (a.get_type() == 1 && a.get_speed() == s.get_speed()) {
+	return - 1000.;
+    }
     // Set fixed rewards for important checkpoints
-    //If straight part
-    if (s.get_stra() <= 0.5 && t.get_stra() > 0.5) {
+    //If go from curve to straight
+    else if (s.get_stra() <= 0.5 && t.get_stra() > 0.5) {
 	// Accelerate and going to inside is good
 	if ((a.get_type() == 1 && a.get_speed() > s.get_speed()) || (a.get_type() == 2 && s.get_lane() < 3 && a.get_offset() < 0)) {
-	    return + 1000.;
+	    return + 100.;
 	} else if ((a.get_type() == 1 && a.get_speed() <= s.get_speed()) || (a.get_type() == 2 && s.get_lane() == 3))  {
-	    return - 1000.;
+	    return - 100.;
 	}
-    } // In curves
+    } // Going from straight to curves
     else if (s.get_stra() > 0.5 && t.get_stra() <= 0.5)  {
 	// Decelerate and going to middle
 	if ((a.get_type() == 1 && a.get_speed() < s.get_speed()) || (a.get_type() == 2 && s.get_lane() > 2 && a.get_offset() > 0)) {
-	    return + 1000.;
+	    return + 100.;
 	} else if ((a.get_type() == 1 && a.get_speed() >= s.get_speed()) || (a.get_type() == 2 && s.get_lane() != 2 && a.get_offset() != 0))  {
-	    return - 1000.;
+	    return - 100.;
 	}
     } 
 
-    // Default is number of vertical segments travelled
-    return get_distance_vseg(s.get_car(), t.get_car());
+    // Default is number of vertical segments travelled (negative if not clockwise)
+    return get_distance_vseg(s.get_car(), t.get_car(), 1);
     
 }
 

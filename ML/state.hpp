@@ -58,7 +58,7 @@ extern std::vector<Centroid> centroids_list;
 //## TODO + 4 as a parameter and clockwise as a parameter of main
 void get_centroid_direction(int id, float direction[2], int clockwise);
 
-float get_distance_vseg(Centroid b, Centroid c);
+float get_distance_vseg(Centroid b, Centroid c, int clockwise);
 /*
  * Class describing a state in the policy
  */

@@ -397,7 +397,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		// Apply policy decsion
-		res = apply_policy_trainingmode(h, *camera_loc, 0.8, 0.5, 0.8);
+		res = apply_policy_trainingmode(h, *camera_loc, 0.8, 0.8, 0.8);
 		if (res < 0) { // changed speed
 		    camera_loc->real_speed = - res;
 		    res = 0;

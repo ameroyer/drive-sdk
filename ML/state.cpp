@@ -49,13 +49,22 @@ void get_centroid_direction(int id, float direction[2], int clockwise) {
     direction[1] = (nxt_centroid.get_y() - centroid.get_y()) / dst;
 }
 
-float get_distance_vseg(Centroid b, Centroid c) {
-    // if cross start line
-    if ((c.get_id() > floor(centroids_list.size() * 0.75) && b.get_id() < floor(centroids_list.size() * 0.25)) || (b.get_id() > floor(centroids_list.size() * 0.75) && c.get_id() < floor(centroids_list.size() * 0.25))) {	    
-	return abs(c.get_id() - b.get_id() + centroids_list.size()) / 4 + 1;
-    } else {
-	return abs(c.get_id() - b.get_id()) / 4 + 1;
-    }
+float get_distance_vseg(Centroid b, Centroid c, int clockwise) {
+
+	//if clockwise rotation sense
+	if (clockwise) {
+    		if (c.get_id() > floor(centroids_list.size() * 0.75) && b.get_id() < floor(centroids_list.size() * 0.25) ) {	    
+			return (b.get_id() - c.get_id() + centroids_list.size()) / 4 + 1;
+    		} else {
+			return (b.get_id() - c.get_id()) / 4 + 1;
+    		}
+	} else {
+    		if (b.get_id() > floor(centroids_list.size() * 0.75) && c.get_id() < floor(centroids_list.size() * 0.25)) {	    
+			return (c.get_id() - b.get_id() + centroids_list.size()) / 4 + 1;
+    		} else {
+			return (c.get_id() - b.get_id()) / 4 + 1;
+    		}
+	}
 }
 
 // State
