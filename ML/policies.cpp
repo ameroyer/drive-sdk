@@ -50,6 +50,16 @@ void export_policy(int current_episode, char* output_dir) {
     f.close();
 }
 
+void export_policy_table(int current_episode, char* output_dir) {
+    //Export policy pi in a file
+    std::ostringstream ss;  
+    ss << output_dir << "policy_table_" << current_episode << ".txt";
+    std::ofstream f;
+    f.open (ss.str().c_str());
+    f << pi.to_string_table();
+    f.close();
+}
+
 
 /**
  * Functions for application / testing phase
@@ -61,10 +71,72 @@ void init_det_one_car_policy() {
 }
     
 
-
+//TODO: fix first line for export and import (state 0)
 // Load a policy stored in a file
 void init_trained_policy(char* filename) {
-    pi = Policy(); //TODO
+    pi = Policy(); 
+    
+    int speed_values[] = {1000, 1500};
+    int offset_values[] = {1000, -1000};
+    float lanespeed = 200;
+    float accel = 2000;
+    epsilon=0.2;
+    
+    //Define states (same as init_totrain_onecar_policy!)
+    for(std::vector<Centroid>::iterator it = centroids_list.begin(); it != centroids_list.end(); ++it) {
+	for(int i = 0; i < sizeof(speed_values) / sizeof(int); i++) {
+	    states_list.push_back(State(*it, speed_values[i]));	
+	}
+    }
+    // Define actions (same as init_totrain_onecar_policy!)
+    int i;
+    actions_list.push_back(Action());
+    for (i = 0; i < 2; i ++) {
+	actions_list.push_back(Action(speed_values[i], accel));
+    }
+    for (i = 0; i < 2; i ++) {
+	actions_list.push_back(Action(offset_values[i], lanespeed, accel));
+    }
+    
+    std::vector<std::vector<float> > qvalue_table;
+    std::ifstream infile(filename);
+    std::string line;
+    int linenr=0;
+    while (std::getline(infile, line))
+	{
+		std::vector<float> qvalues_line;
+	    std::istringstream iss(line);
+		float q;
+		int count=0;
+		while (iss.good()) // while the stream is not empty
+        {
+            iss >> q; //get data from the stream. This will give you only up until the next whitespace.
+                        //Get numbers, strings, whatever you want.
+            qvalues_line.push_back(q);
+            count++;
+        }
+        if(count>2){
+			qvalue_table.push_back(qvalues_line);
+		}else{
+			printf("State0line ");
+		}
+	    linenr++;
+	}
+	
+	// Set q-values that were loaded from file    
+	linenr=0;  
+	for(std::vector<State>::iterator its = states_list.begin(); its != states_list.end(); ++its) {
+		std::vector<float> qvalues_state=qvalue_table.at(linenr);
+		int actionnr=0;
+		for(std::vector<Action>::iterator ita = actions_list.begin(); ita != actions_list.end(); ++ita) {
+			if(qvalues_state.size()>0){
+				//printf("\n %f", qvalues_state.at(actionnr));
+				pi.set_score(*its, *ita, qvalues_state.at(actionnr));
+				actionnr++;
+			}
+		}
+		linenr++;
+    }
 }
 
 
@@ -100,6 +172,8 @@ void init_totrain_onecar_policy(float initepsilon) {
     }
     // Define actions
     int i;
+    actions_list.push_back(Action());
+    
     for (i = 0; i < 2; i ++) {
 	actions_list.push_back(Action(speed_values[i], accel));
     }
@@ -111,11 +185,21 @@ void init_totrain_onecar_policy(float initepsilon) {
     // Set arbitray q-values
     for(std::vector<Action>::iterator ita = actions_list.begin(); ita != actions_list.end(); ++ita) {
 	for(std::vector<State>::iterator its = states_list.begin(); its != states_list.end(); ++its) {
-	    pi.set_score(*its, *ita, 0.);
+	
+		// Constraint  the car to stay in the track
+		if (ita->get_type() == 2 && ( (ita->get_offset() < 0 && its->get_lane() == 3) || (ita->get_offset() > 0 && its->get_lane() == 0) ) ) {
+			pi.set_score(*its, *ita, -1000.);
+		}  
+		// Do not set speed to current speed (= useless)
+		else if (ita->get_type() == 1 && (ita->get_speed() == its->get_speed())) {
+			pi.set_score(*its, *ita, -1000.);
+		} else {
+			pi.set_score(*its, *ita, 0.);
+		}
 	}
     }
 
-    /*
+    
     // Set fixed q vqlues for important checkpoints
     for(std::vector<Action>::iterator ita = actions_list.begin(); ita != actions_list.end(); ++ita) {
 	for(std::vector<State>::iterator its = states_list.begin(); its != states_list.end(); ++its) {
@@ -142,7 +226,7 @@ void init_totrain_onecar_policy(float initepsilon) {
 	
             } 
 	}
-    }*/
+    }
 }
 
 
@@ -155,10 +239,10 @@ float reward_onecar_policy(State s, Action a, State t) {
 	return - 1000.;
     }  
     // Do not set speed to current speed (= useless)
-    else if (a.get_type() == 1 && a.get_speed() == s.get_speed()) {
+    else if (a.get_type() == 1 && (a.get_speed() == s.get_speed())) {
 	return - 1000.;
     }
-    // Set fixed rewards for important checkpoints
+   /* // Set fixed rewards for important checkpoints
     //If go from curve to straight
     else if (s.get_stra() <= 0.5 && t.get_stra() > 0.5) {
 	// Accelerate and going to inside is good
@@ -176,8 +260,9 @@ float reward_onecar_policy(State s, Action a, State t) {
 	    return - 100.;
 	}
     } 
-
+	*/
     // Default is number of vertical segments travelled (negative if not clockwise)
+	//printf("dist vseg: %f ",get_distance_vseg(s.get_car(), t.get_car(), 1));
     return get_distance_vseg(s.get_car(), t.get_car(), 1);
     
 }
@@ -194,15 +279,19 @@ int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learn
 	pi.set_score(previous_state, previous_action, pi.get_score(previous_state, previous_action) * (1. - learning_rate) + learning_rate * discount_factor * pi.get_best_score(s) + learning_rate * reward_onecar_policy(previous_state, previous_action, s));
     }
     fprintf(stderr, "Reward %f", reward_onecar_policy(previous_state, previous_action, s));
-
-    //Choose best action (epsilon greedy with decay)
-    epsilon *= epsilondecay; 
+    //Choose best action (epsilon greedy with decay)  
+    if (epsilon > 0.05) {
+			epsilon *= epsilondecay;
+	}
     float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-    if (r < epsilondecay) {
-	previous_action = pi.get_random_action(s);
+    printf(" eps: %f ",epsilon);
+    if (r < epsilon) { // might cause seg faults?
+		printf(" random ");
+	    previous_action = pi.get_random_action(s);        
     } else {
     	previous_action = pi.get_next_action(s);
     }
+    printf("\n");
     previous_state = s;
     run_actions.push_back(previous_action);
     return previous_action.apply(h);

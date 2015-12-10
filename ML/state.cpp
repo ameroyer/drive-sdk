@@ -106,8 +106,9 @@ Action Policy::get_next_action(State s) {
     return best;
 }
 
-Action Policy::get_random_action(State s) {
-    int index = rand() % qscores[s].size();
+Action Policy::get_random_action(State s) { 
+    int index = rand() % (qscores[s].size()+1); //+1 important so that change lane outside get selected too
+    //printf(" qsize: %d rand: %d ",qscores[s].size(),index);
     for(std::map<Action, float>::iterator iterator = qscores[s].begin(); iterator != qscores[s].end(); iterator++) {
 	index -= 1;
 	if (index <= 0) {

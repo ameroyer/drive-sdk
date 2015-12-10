@@ -260,7 +260,7 @@ int main(int argc, char *argv[]) {
      * Hyper parameters
      */
     float camera_update = 0.04; // Update of the camera picture, in percent of seconds
-    float control_update = 0.5; // Update of the vehicle action, `` `` ``
+    float control_update = 0.1; // Update of the vehicle action, `` `` ``
     float background_update = 5; // Update of the background, `` `` ``
     int background_start = 20;  // Index at which the background computation starts
     int background_history = 10; // Number of images to use for median computation
@@ -268,8 +268,8 @@ int main(int argc, char *argv[]) {
     // training paramters
     int training = 1;//1;
     //int training = 0;
-    int nepisodes = 20;
-    int nsteps = 30;
+    int nepisodes = 200;
+    int nsteps = 1000;
     //control_update = 0.3;
 
     /*
@@ -375,9 +375,13 @@ int main(int argc, char *argv[]) {
      * 2. Or: training mode
      */
     else {
-	init_totrain_onecar_policy(0.9);
-	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
+	//start with initial policz
+	//init_totrain_onecar_policy(0.5);
+	//or load policy
+	init_trained_policy("/home/cvml1/Code/TrainRuns/Training1c/policy_table_160.txt");
 	// Start
+	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
+	export_policy_table(0,  "/home/cvml1/Code/TrainRuns/");
 	res = anki_s_set_speed(h, 1000, 20000);
 	camera_loc->real_speed = 1000;
 	int episode, step;
@@ -393,11 +397,12 @@ int main(int argc, char *argv[]) {
 		// Check direction and perform uturn if false
 		if(!camera_loc->is_clockwise){
 		    anki_s_uturn(h);
+			while(!camera_loc->is_clockwise) {};
 		    fprintf(stderr, "U-turn\n");
 		}
 
-		// Apply policy decsion
-		res = apply_policy_trainingmode(h, *camera_loc, 0.8, 0.8, 0.8);
+		// Apply policy decsion (.., .. , learning_rate, discount_factor, epsilondecay)
+		res = apply_policy_trainingmode(h, *camera_loc, 0.8, 0.7, 0.999);
 		if (res < 0) { // changed speed
 		    camera_loc->real_speed = - res;
 		    res = 0;
@@ -429,9 +434,14 @@ int main(int argc, char *argv[]) {
 	    if (!kbint || res) {
 		break;
 	    }
+	    if (episode>0&&episode%20==0){
+		export_policy(episode,  "/home/cvml1/Code/TrainRuns/");
+		export_policy_table(episode,  "/home/cvml1/Code/TrainRuns/");
+	    }
 	}
 	// Save policy
 	export_policy(nepisodes,  "/home/cvml1/Code/TrainRuns/");
+	export_policy_table(nepisodes,  "/home/cvml1/Code/TrainRuns/");
     }
 
 

@@ -23,6 +23,7 @@ extern "C" {
     void reset_run();
     void export_run(int current_run, char* output_dir);
     void export_policy(int current_episode, char* output_dir);
+    void export_policy_table(int current_episode, char* output_dir);
 
 
 #ifdef __cplusplus

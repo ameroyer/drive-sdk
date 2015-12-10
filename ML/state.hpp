@@ -165,7 +165,7 @@ public:
 	return ss.str();
     };
 
-    //Ovveride < to use Actione as a key
+    //Ovveride < to use Action as a key
     bool operator <(const Action& rhs) const {
         return (type < rhs.type) || (type == 1 && rhs.type == 1 && (speed < rhs.speed || (speed == rhs.speed && accel < rhs.accel))) || (type == 2 && rhs.type == 2 && (speed < rhs.speed || (speed == rhs.speed && accel < rhs.accel) || (speed == rhs.speed && accel == rhs.accel && offset < rhs.offset)));
     }
@@ -186,13 +186,25 @@ public:
     void set_score(State s, Action a, float value);
     float get_score(State s, Action a);
 
-    // string representation
+    // string representation (nice output)
     std::string to_string() {
 	std::ostringstream ss;
 	for(std::map<State, std::map<Action, float> >::iterator it = qscores.begin(); it != qscores.end(); it++) {
 	    ss << "- " << it->first.to_string() << "\n";
 	    for(std::map<Action, float>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++) {
 		ss << "   -> " << it2->first.to_string() << ". Q-value = " << it2->second << "\n";
+	    }
+	    ss << "\n";
+	}
+	return ss.str();
+    };
+    
+    // string representation (only table of numbers)
+    std::string to_string_table() {
+	std::ostringstream ss;
+	for(std::map<State, std::map<Action, float> >::iterator it = qscores.begin(); it != qscores.end(); it++) {
+	    for(std::map<Action, float>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++) {
+		ss << it2->second << " ";
 	    }
 	    ss << "\n";
 	}

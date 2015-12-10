@@ -52,6 +52,11 @@ where:
 - (ML) Implement Reinforcement Learning/Q-Learning for the situation with only one car to get the best policy
 - (ML) Create main q-learning algorithm structure
 
+Questions:
+Why is the car try to change to inside so much? random behaviour, equal for going outside?
+Problem with (output of) runs? set speed 1500, then state speed still 1000...
+How to define rewards?
+
 
 3. With opponents...
 ---------------------
