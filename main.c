@@ -265,15 +265,20 @@ int main(int argc, char *argv[]) {
     int background_start = 20;  // Index at which the background computation starts
     int background_history = 10; // Number of images to use for median computation
     int nlap = 5; // Number of laps before the car stops
-    // training paramters
-    int training = 1;//1;
-    //int training = 0;
-    int nepisodes = 101;
-    int nsteps = 1000;
-    //control_update = 0.3;
+
 
     /*
-     * Read parameters
+     * Training parameters
+     */
+    int training = 1;
+    int nepisodes = 101;
+    int nsteps = 1000;
+    float learning_rate = 0.7;
+    float discount_factor = 0.9
+    float epsilon_decay = 0.7;
+
+    /*
+     * Read input parameters
      */
     if(argc<2){
 	fprintf(stderr, "usage: %s car-name [nbr of opponents] [adaptater] [verbose]\n",argv[0]);
@@ -310,13 +315,9 @@ int main(int argc, char *argv[]) {
     // Additional parameters
     run_index = 0;
     int res, lap;
-    //localization_t loc;
     float laptime=-1.;
     float totaltime = 0.;
     float minlaptime = 50.;
-    //float epsilon = 0.0001;
-    //float previous_camera_loc[2] = {camera_loc->x, camera_loc->y};
-
     /*
      * 1. First: normal (non trainng) mode
      */
@@ -351,23 +352,16 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "U-turn\n");
 	    }
 
-	    // Check if car stands still (no update of loc information) and set speed randomly  if so
-	    //if(camera_loc->success && abs(previous_camera_loc[0] - camera_loc->x) < epsilon && abs(previous_camera_loc[1] - camera_loc->y) < epsilon){
-	    //anki_s_set_speed(h,500 + 1000 * ((double) rand() / (RAND_MAX)), 20000);
-	    //	fprintf(stderr, "Still\n");
-	    //  }
 
-	    // Apply policy decsion
+	    // Apply deterministic policy decsion
 	    res = apply_policy(h, *camera_loc);
 	    if (res < 0) { // changed speed
 		camera_loc->real_speed = - res;
 		res = 0;
 	    }
 
-	    // Next loop
+	    // Next step
 	    run_index += 1;
-	    //previous_camera_loc[0] = camera_loc->x;
-	    //previous_camera_loc[1] = camera_loc->y;
 	    usleep(control_update * 1000000);
 	}
     }
@@ -375,18 +369,19 @@ int main(int argc, char *argv[]) {
      * 2. Or: training mode
      */
     else {
-	//start with initial policy
+	//Initialize
 	//init_totrain_onecar_policy(0.1);
-	//or load policy
 	init_trained_policy("/home/cvml1/Code/TrainRuns/TrainingLap1h/policy_table_50.txt");
-	// Start
 	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
 	export_policy_table(0,  "/home/cvml1/Code/TrainRuns/");
 	res = anki_s_set_speed(h, 1200, 20000);
 	camera_loc->real_speed = 1200;
 	int episode, step;
+
+	// Start training
 	for (episode = 0; episode < nepisodes; episode++) {
 		fprintf(stderr, "EPISODE %d \n",episode);
+
 	    for (step = 0; step < nsteps; step++) {
 		fprintf(stderr, "STEP %d \n ",step);
 		// Display
@@ -394,51 +389,60 @@ int main(int argc, char *argv[]) {
 		print_camera_loc();
 		printf("\n");
 
-		// Check direction and perform uturn if false
+		// Check direction and perform uturn if false [wait until completion]
 		if(!camera_loc->is_clockwise){
 		    anki_s_uturn(h);
 			while(!camera_loc->is_clockwise) {};
 		    fprintf(stderr, "U-turn\n");
 		}
 
-		// Apply policy decsion (.., .. , learning_rate, discount_factor, epsilondecay)
-		res = apply_policy_trainingmode_afterlap(h, *camera_loc, 0.8, 0.7, 1);
-		if (res < 0) { // changed speed
+		// Apply policy decsion (.., .. , learning_rate, discount_factor, epsilondecay, with reward based on distance [1] or 0 reward [0])
+		res = apply_policy_trainingmode_afterlap(h, *camera_loc, learning_rate, discount_factor, epsilon_decay, 1, 0);
+		if (res < 0) { // update real speed
 		    camera_loc->real_speed = - res;
 		    res = 0;
 		}
 		
-		// Check if lap finished
+		// Detect finished lap
 		laptime = is_car_finished();
-		if (laptime > 2.){
+		if (laptime > 2.5){
 		    fprintf(stderr, "    > Lap time: %.3f\n\n", laptime);
 		    totaltime += laptime;
 		    if (laptime < minlaptime) {
 		        minlaptime = laptime;
 		    }
+		    // Update policy based on lap time
+		    update_policy_trainingmode_afterlap(laptime, learning_rate, discount_factor, epsilon_decay);
+
+		    // Next lap
+		    run_index += 1;
+		    usleep(control_update * 1000000);
 		    break;
 		}
-
-		// Next loop
-		run_index += 1;
-		usleep(control_update * 1000000);
-
+	
+		// Break if error
 		if (!kbint || res) {
 			break;
 		}
 
+		// Next step
+		run_index += 1;
+		usleep(control_update * 1000000);
 	    }
-	    //save run
+
+	    // Save run
 	    export_run(episode, "/home/cvml1/Code/TrainRuns/",laptime);
 	    reset_run();
 	    if (!kbint || res) {
 		break;
 	    }
+
 	    if (episode>0&&episode%10==0){
 		export_policy(episode,  "/home/cvml1/Code/TrainRuns/");
 		export_policy_table(episode,  "/home/cvml1/Code/TrainRuns/");
 	    }
 	}
+
 	// Save policy
 	export_policy(nepisodes, "/home/cvml1/Code/TrainRuns/");
 	export_policy_table(nepisodes, "/home/cvml1/Code/TrainRuns/");
