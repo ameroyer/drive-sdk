@@ -45,8 +45,10 @@ if (BUILD_PROJECT)
   set(Project_SOURCES
     examples/simple-c-interface/anki-simplified.h
     examples/simple-c-interface/anki-simplified.c
+    CV/get_camera.hpp
     ML/state.hpp
     ML/state.cpp
+    ML/policies.hpp
     ML/policies.cpp
     CV/quickselect.c
     CV/get_camera.cpp

@@ -106,7 +106,7 @@ Action Policy::get_next_action(State s) {
 	    best = iterator->first;
 	}
     }
-    printf("best score: %f, best type: %d ",max,best.get_type()); 
+    //printf("best score: %f, best type: %d ", max, best.get_type()); 
     return best;
 }
 

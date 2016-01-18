@@ -14,7 +14,7 @@ extern "C" {
      */
     int apply_policy(AnkiHandle h, camera_localization_t c); //apply deterministic policy
     int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learning_rate, float discount_factor, float epsilondecay, int distance_reward);
-    void update_policy_trainingmode_afterlap(float laptime, float learning_rate, float discount_factor, float epsilondecay);
+    void update_policy_afterlap(float laptime, float learning_rate, float discount_factor, float epsilondecay);
 
     /*
      * Functions to store and load training results

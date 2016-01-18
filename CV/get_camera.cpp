@@ -307,11 +307,15 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     int h, c;
     int obst = 0;
 
-    // Detection
+    // OpenCV Detection
     cvtColor(Mat(ppm_height, ppm_width, CV_8UC3, shm->data), im, COLOR_BGR2HSV);
     detector->detect(im, keypoints);
 
-    // Identify our car
+    // Predict our car's future position [Dead Reckoning]
+    //float dead_reckon_x = camera_loc->x + camera_loc->speed * (index - camera_loc->update_time) * camera_loc->direction[0];
+    
+
+    // Identify our car [closest in color and in predicted position]
     camera_loc->success = 0;
     for(std::vector<KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
 	h = get_mean_hue(shm->data, (int) (*it).pt.x, (int) (*it).pt.y, (int) (0.5 * (*it).size));

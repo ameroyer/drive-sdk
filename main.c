@@ -260,7 +260,7 @@ int main(int argc, char *argv[]) {
      * Hyper parameters
      */
     float camera_update = 0.04; // Update of the camera picture, in percent of seconds
-    float control_update = 0.15; // Update of the vehicle action, `` `` ``
+    float control_update = 0.2; // Update of the vehicle action, `` `` ``
     float background_update = 5; // Update of the background, `` `` ``
     int background_start = 20;  // Index at which the background computation starts
     int background_history = 10; // Number of images to use for median computation
@@ -274,8 +274,8 @@ int main(int argc, char *argv[]) {
     int nepisodes = 101;
     int nsteps = 1000;
     float learning_rate = 0.7;
-    float discount_factor = 0.9
-    float epsilon_decay = 0.7;
+    float discount_factor = 0.95;
+    float epsilon_decay = 0.8;
 
     /*
      * Read input parameters
@@ -370,34 +370,39 @@ int main(int argc, char *argv[]) {
      */
     else {
 	//Initialize
-	//init_totrain_onecar_policy(0.1);
-	init_trained_policy("/home/cvml1/Code/TrainRuns/TrainingLap1h/policy_table_50.txt");
+	init_totrain_onecar_policy(0.1);
+	//init_trained_policy("/home/cvml1/Code/TrainRuns/TrainingLap1h/policy_table_50.txt");
 	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
 	export_policy_table(0,  "/home/cvml1/Code/TrainRuns/");
-	res = anki_s_set_speed(h, 1200, 20000);
-	camera_loc->real_speed = 1200;
+	res = anki_s_set_speed(h, 1100, 2000);
+	camera_loc->real_speed = 1100;
 	int episode, step;
 
-	// Start training
+	// Start episode
 	for (episode = 0; episode < nepisodes; episode++) {
-		fprintf(stderr, "EPISODE %d \n",episode);
+	    fprintf(stderr, KMAG "EPISODE %d \n" RESET,episode);
+    	    gettimeofday(&lapstarttime, NULL);
 
+	    // Start run
 	    for (step = 0; step < nsteps; step++) {
 		fprintf(stderr, "STEP %d \n ",step);
 		// Display
+		printf("\n");
 		print_loc(h);
 		print_camera_loc();
-		printf("\n");
 
-		// Check direction and perform uturn if false [wait until completion]
+		// Check direction and perform uturn if false [wait until completion and restart]
 		if(!camera_loc->is_clockwise){
 		    anki_s_uturn(h);
 			while(!camera_loc->is_clockwise) {};
-		    fprintf(stderr, "U-turn\n");
+		    fprintf(stderr, KMAG "U-turn\n" RESET);
+		    run_index += 1;
+		    usleep(2 * control_update * 1000000);
+		    break;
 		}
 
 		// Apply policy decsion (.., .. , learning_rate, discount_factor, epsilondecay, with reward based on distance [1] or 0 reward [0])
-		res = apply_policy_trainingmode_afterlap(h, *camera_loc, learning_rate, discount_factor, epsilon_decay, 1, 0);
+		res = apply_policy_trainingmode(h, *camera_loc, learning_rate, discount_factor, epsilon_decay, 1);
 		if (res < 0) { // update real speed
 		    camera_loc->real_speed = - res;
 		    res = 0;
@@ -405,14 +410,14 @@ int main(int argc, char *argv[]) {
 		
 		// Detect finished lap
 		laptime = is_car_finished();
-		if (laptime > 2.5){
+		if (laptime > 2.8){
 		    fprintf(stderr, "    > Lap time: %.3f\n\n", laptime);
 		    totaltime += laptime;
 		    if (laptime < minlaptime) {
 		        minlaptime = laptime;
 		    }
 		    // Update policy based on lap time
-		    update_policy_trainingmode_afterlap(laptime, learning_rate, discount_factor, epsilon_decay);
+		    update_policy_afterlap(laptime, learning_rate, discount_factor, epsilon_decay);
 
 		    // Next lap
 		    run_index += 1;

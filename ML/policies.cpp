@@ -18,6 +18,7 @@ static std::vector<Action> run_actions;
 static float epsilon = 1.0;
 
 
+
 /**
  * Export functions
  */	
@@ -169,9 +170,9 @@ void init_trained_policy(char* filename) {
 void init_totrain_onecar_policy(float initepsilon) {
     pi = Policy();
     epsilon = initepsilon;
-    int speed_values[] = {1200, 1700};
+    int speed_values[] = {1100, 1600};
     int offset_values[] = {1000, -1000};
-    float lanespeed = 200;
+    float lanespeed = 150;
     float accel = 2000;
 
     //Define states
@@ -243,7 +244,7 @@ float distance_reward_onecar_policy(State s, Action a, State t) {
 	return - 1000.;
     }
 
-    float r = get_distance_vseg(s.get_car(), t.get_car(), 1);
+    float r = get_distance_vseg(s.get_car(), t.get_car(), 1) - 3;
     if (r < 0) {
 	    r = -100.;
 	}
@@ -251,7 +252,7 @@ float distance_reward_onecar_policy(State s, Action a, State t) {
     
 }
 
-// 0-reward (except forbidden state)
+// 0-reward (except forbidden state such has going off track or doing uturn)
 float zero_reward_onecar_policy(State s, Action a, State t) {
 
     // Constraint  the car to stay in the track
@@ -263,7 +264,28 @@ float zero_reward_onecar_policy(State s, Action a, State t) {
 	return - 1000.;
     }
 
+    float r = get_distance_vseg(s.get_car(), t.get_car(), 1);
+    if (r < 0) {
+	    r = -1000.;
+	}
+
     return 0;    
+}
+
+
+
+// Update the policy value by backpropagation once a whole lap is finished
+void update_policy_afterlap(float laptime, float learning_rate, float discount_factor, float epsilondecay) {
+    // Set laptime
+    float reward = - laptime;
+    //fprintf(stderr, "Reward %f\n", reward);
+
+    //update q-values for all steps of this run [Back propagation]
+    int i;
+    for(i = run.size() - 1; i >= 0; i--) {
+       float new_score = learning_rate * reward; // + pi.get_score(run[i], run_actions[i]) * (1. - learning_rate) ;
+       pi.set_score(run[i], run_actions[i], new_score);
+    }
 }
 
 
@@ -276,17 +298,17 @@ int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learn
     //If not first state, update policy
     if (run.size() > 0) {
 
-	int reward = 0;
+	float reward = 0;
 	if (distance_reward) {
 	  reward = distance_reward_onecar_policy(previous_state, previous_action, s);
 	} else {
-	  reward = zero_reward_onecar_policy(previous_state, previous_action, s)
+	  reward = zero_reward_onecar_policy(previous_state, previous_action, s);
 	}
 
 	pi.set_score(previous_state, previous_action, pi.get_score(previous_state, previous_action) * (1. - learning_rate) + learning_rate * discount_factor * pi.get_best_score(s) + learning_rate * reward);
+        //fprintf(stderr, "Reward %f", reward);
     }
 
-    fprintf(stderr, "Reward %f", reward);
 
     //Choose best action (epsilon greedy with decay)  
     if (epsilon > 0.1) {
@@ -307,20 +329,6 @@ int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learn
     return previous_action.apply(h);
 }
 
-
-// Update the policy value by backpropagation once a whole lap is finished
-void update_policy_trainingmode_afterlap(float laptime, AnkiHandle h, camera_localization_t c, float learning_rate, float discount_factor, float epsilondecay) {
-    // Set laptime
-    float reward = - laptime;
-    fprintf(stderr, "Reward %f\n", reward);
-
-    //update q-values for all steps of this run [Back propagation]
-    int i;
-    for(i = run.size() - 1; i >= 0; i--) {
-       float new_score = learning_rate * reward; // + pi.get_score(run[i], run_actions[i]) * (1. - learning_rate) ;
-       pi.set_score(run[i], run_actions[i], new_score);
-    }
-}
 
 
 /*

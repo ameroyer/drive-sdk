@@ -78,6 +78,7 @@ def visualize_policy(policy_path, v=40, d=4, joint=False):
             centroids[i] = (int(float(aux[0])), int(float(aux[1])))
 
     # Parse policy
+    speedmin, speedmax = 1100, 1600
     heatmaps = [defaultdict(lambda: 0) for _ in xrange(4)]
     with open(policy_path, "r") as f:
         for line in f.read().splitlines():
@@ -93,10 +94,10 @@ def visualize_policy(policy_path, v=40, d=4, joint=False):
                 qvalue = float(line.split()[-1]) 
 
                 # Acceleration
-                if action == 'speed' and param == '1700' and speed == 1200:
+                if action == 'speed' and param == str(speedmax) and speed == speedmin:
                     heatmaps[0][indx] = qvalue
                 # Deceleration
-                elif action == 'speed' and param == '1200' and speed == 1700:
+                elif action == 'speed' and param == str(speedmin) and speed == speedmax:
                     heatmaps[1][indx] = qvalue
                 # Change lane inside [average over speed]
                 elif action == 'lane' and  param == 'INSIDE':
@@ -136,7 +137,7 @@ def visualize_policy(policy_path, v=40, d=4, joint=False):
     if joint:
         f.savefig('heatmap_%s_normalized.pdf' % policy_path.rsplit('.', 1)[0].rsplit('/', 1)[1], bbox_inches='tight', dpi=500)
     else:
-        f.savefig('heatmap_%s.pdf' % policy_path.rsplit('.', 1)[0].rsplit('/', 1)[1], bbox_inches='tight', dpi=500)
+        f.savefig('%s_heatmap.pdf' % policy_path.rsplit('.', 1), bbox_inches='tight', dpi=500)
     plt.show()
 
 
