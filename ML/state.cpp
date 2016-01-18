@@ -95,14 +95,18 @@ int State::get_carid() {
 
 //find action that maximizes the score for state s
 Action Policy::get_next_action(State s) {
-    float max = 0;
+    float max = -100;
     Action best;
+    Action act;
     for(std::map<Action, float>::iterator iterator = qscores[s].begin(); iterator != qscores[s].end(); iterator++) {
+		act=iterator->first;
+		//printf("type: %d, score: %f ",act.get_type(),iterator->second);
 	if (iterator->second > max) {
 	    max = iterator->second;
 	    best = iterator->first;
 	}
     }
+    printf("best score: %f, best type: %d ",max,best.get_type()); 
     return best;
 }
 

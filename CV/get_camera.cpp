@@ -76,6 +76,10 @@ float is_car_finished() {
     return res;
 }
 
+float get_laptime() {
+    return laptime;
+}
+
 
 /**
  * Initialize the global list of centroids (see state.hpp)

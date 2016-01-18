@@ -14,6 +14,7 @@ extern "C" {
      */
     int apply_policy(AnkiHandle h, camera_localization_t c);
     int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learning_rate, float discount_factor, float epsilondecay);
+    int apply_policy_trainingmode_afterlap(AnkiHandle h, camera_localization_t c, float learning_rate, float discount_factor, float epsilondecay);
 
     /*
      * Functions to store and load training results
@@ -21,7 +22,7 @@ extern "C" {
     void init_trained_policy(char* filename);
     void init_totrain_onecar_policy(float initepsilon);
     void reset_run();
-    void export_run(int current_run, char* output_dir);
+    void export_run(int current_run, char* output_dir, double laptime);
     void export_policy(int current_episode, char* output_dir);
     void export_policy_table(int current_episode, char* output_dir);
 

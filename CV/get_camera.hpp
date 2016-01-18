@@ -73,6 +73,7 @@ extern "C" {
     void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_color);
     void get_camera_lock_dead_reckon(int time, float result[2]);
     float is_car_finished();
+    float get_laptime();
 
     /**
      * Substract two camera images

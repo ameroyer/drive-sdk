@@ -110,7 +110,7 @@ void* update_camera_loc(void* aux) {
 
     //Init structures
     init_blob_detector();
-    init_centroids_list("CV/centroids_h75_v4.txt", verbose);
+    init_centroids_list("CV/centroids_h40_v4.txt", verbose);
 
     camera_obst = (camera_obst_localization_t*) malloc(sizeof(camera_obst_localization_t));
     camera_obst->total = args->n_obst;
@@ -260,7 +260,7 @@ int main(int argc, char *argv[]) {
      * Hyper parameters
      */
     float camera_update = 0.04; // Update of the camera picture, in percent of seconds
-    float control_update = 0.1; // Update of the vehicle action, `` `` ``
+    float control_update = 0.15; // Update of the vehicle action, `` `` ``
     float background_update = 5; // Update of the background, `` `` ``
     int background_start = 20;  // Index at which the background computation starts
     int background_history = 10; // Number of images to use for median computation
@@ -268,7 +268,7 @@ int main(int argc, char *argv[]) {
     // training paramters
     int training = 1;//1;
     //int training = 0;
-    int nepisodes = 200;
+    int nepisodes = 101;
     int nsteps = 1000;
     //control_update = 0.3;
 
@@ -375,15 +375,15 @@ int main(int argc, char *argv[]) {
      * 2. Or: training mode
      */
     else {
-	//start with initial policz
-	//init_totrain_onecar_policy(0.5);
+	//start with initial policy
+	//init_totrain_onecar_policy(0.1);
 	//or load policy
-	init_trained_policy("/home/cvml1/Code/TrainRuns/Training1c/policy_table_160.txt");
+	init_trained_policy("/home/cvml1/Code/TrainRuns/TrainingLap1h/policy_table_50.txt");
 	// Start
 	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
 	export_policy_table(0,  "/home/cvml1/Code/TrainRuns/");
-	res = anki_s_set_speed(h, 1000, 20000);
-	camera_loc->real_speed = 1000;
+	res = anki_s_set_speed(h, 1200, 20000);
+	camera_loc->real_speed = 1200;
 	int episode, step;
 	for (episode = 0; episode < nepisodes; episode++) {
 		fprintf(stderr, "EPISODE %d \n",episode);
@@ -402,7 +402,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		// Apply policy decsion (.., .. , learning_rate, discount_factor, epsilondecay)
-		res = apply_policy_trainingmode(h, *camera_loc, 0.8, 0.7, 0.999);
+		res = apply_policy_trainingmode_afterlap(h, *camera_loc, 0.8, 0.7, 1);
 		if (res < 0) { // changed speed
 		    camera_loc->real_speed = - res;
 		    res = 0;
@@ -429,19 +429,19 @@ int main(int argc, char *argv[]) {
 
 	    }
 	    //save run
-	    export_run(episode, "/home/cvml1/Code/TrainRuns/");
+	    export_run(episode, "/home/cvml1/Code/TrainRuns/",laptime);
 	    reset_run();
 	    if (!kbint || res) {
 		break;
 	    }
-	    if (episode>0&&episode%20==0){
+	    if (episode>0&&episode%10==0){
 		export_policy(episode,  "/home/cvml1/Code/TrainRuns/");
 		export_policy_table(episode,  "/home/cvml1/Code/TrainRuns/");
 	    }
 	}
 	// Save policy
-	export_policy(nepisodes,  "/home/cvml1/Code/TrainRuns/");
-	export_policy_table(nepisodes,  "/home/cvml1/Code/TrainRuns/");
+	export_policy(nepisodes, "/home/cvml1/Code/TrainRuns/");
+	export_policy_table(nepisodes, "/home/cvml1/Code/TrainRuns/");
     }
 
 

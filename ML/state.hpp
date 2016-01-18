@@ -145,8 +145,9 @@ public:
 	} else {
 	    std::cout << "DEBUG: Change lane with offset " << offset << "\n";
 	    int a = anki_s_change_lane(h, offset, speed, accel);
-	    int b = anki_s_cancel_lane_change(h);
-	    return (a + b) ;
+	    return a;
+	    //int b = anki_s_cancel_lane_change(h);
+	    //return (a + b) ;
 	}
     };
 
