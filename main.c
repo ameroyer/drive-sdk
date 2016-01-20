@@ -441,7 +441,7 @@ int main(int argc, char *argv[]) {
      */
     else if (mode == 0) {
 	//Initialize
-	init_totrain_onecar_policy(0.);
+	init_totrain_onecar_policy(0.1);
 	//init_trained_policy("/home/cvml1/Code/TrainRuns/Training_1801/policy_table_301.txt");
 	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
 	export_policy_table(0,  "/home/cvml1/Code/TrainRuns/");
@@ -459,7 +459,7 @@ int main(int argc, char *argv[]) {
 
 	    // Start run
 	    for (step = 0; step < nsteps; step++) {
-		fprintf(stderr, "-------- STEP %d ",step);
+		fprintf(stderr, "\n-------- STEP %d ",step);
 		// Display
 		printf("\n");
 		print_loc(h);
@@ -476,8 +476,8 @@ int main(int argc, char *argv[]) {
 		}
 
 		// Apply policy decsion (.., .. , learning_rate, discount_factor, epsilondecay, with reward based on distance [1] or 0 reward [0])
-		//res = apply_policy_trainingmode(h, *camera_loc, learning_rate, discount_factor, epsilon_decay, 1);
-		res = apply_policy_trainingmode(h, *camera_loc, learning_rate, discount_factor, epsilon_decay, 0);
+		res = apply_policy_trainingmode(h, *camera_loc, learning_rate, discount_factor, epsilon_decay, 1);
+		//res = apply_policy_trainingmode(h, *camera_loc, learning_rate, discount_factor, epsilon_decay, 0);
 		if (res < 0) { // update real speed
 		    camera_loc->real_speed = - res;
 		    res = 0;
