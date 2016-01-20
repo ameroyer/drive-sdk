@@ -94,6 +94,7 @@ struct arg_struct {
     int history;           // nbr of images for bacground computation
     int n_obst;            //nbr  of opponents on the track
     int verbose;           // 0-1: set verbosity level
+    int race_clockwise;    // 1 if race is run clockwise, 0 otherwise
 };
 
 
@@ -109,6 +110,7 @@ void* update_camera_loc(void* aux) {
     int bg_start = args->background_start;
     int bg_update = args->background_update;
     int verbose = args->verbose;
+    int race_clockwise = args->race_clockwise;
 
     //Init structures
     init_blob_detector();
@@ -126,7 +128,7 @@ void* update_camera_loc(void* aux) {
     camera_loc->direction[1] = 0;
     camera_loc->centroid=0;
     camera_loc->update_time = 0;
-    camera_loc->is_clockwise = 1;
+    camera_loc->is_clockwise = race_clockwise;
 
     input_median = (unsigned char**) malloc(sizeof(unsigned char*) * bg_history);
     int i;
@@ -178,7 +180,7 @@ void* update_camera_loc(void* aux) {
 	// Compute differential image in temp and update location
 	temp->count = camera_index + 1;
 	sub(shm, background, temp, 80);
-	get_camera_loc(temp, camera_index + 1, verbose, car_color);
+	get_camera_loc(temp, camera_index + 1, verbose, car_color, race_clockwise);
 
 	// If needed, save current image for next background update
 	if (camera_index == next_bg_update) {
@@ -268,6 +270,7 @@ int main(int argc, char *argv[]) {
     int background_start = 80;    // Index at which the background computation starts
     int background_history = 15;  // Number of images to use for median computation
     int nlap = 10;                // Number of laps before the car stops
+    int race_clockwise = 0;       // Race in counter clockwise direction
 
 
     /*
@@ -414,9 +417,9 @@ int main(int argc, char *argv[]) {
 	    }
 
 	    // Check direction and perform uturn if false
-	    if(!camera_loc->is_clockwise){
+	    if(camera_loc->is_clockwise != race_clockwise){
 		anki_s_uturn(h);
-			while(!camera_loc->is_clockwise) {};
+			while(camera_loc->is_clockwise != race_clockwise) {};
 		fprintf(stderr, "U-turn\n");
 	    }
 
@@ -463,9 +466,9 @@ int main(int argc, char *argv[]) {
 		print_camera_loc();
 
 		// Check direction and perform uturn if false [wait until completion and restart]
-		if(!camera_loc->is_clockwise){
+		if(camera_loc->is_clockwise != race_clockwise){
 		    anki_s_uturn(h);
-			while(!camera_loc->is_clockwise) {};
+			while(camera_loc->is_clockwise != race_clockwise) {};
 		    fprintf(stderr, KMAG "U-turn\n" RESET);
 		    run_index += 1;
 		    usleep(1 * 1000000);

@@ -323,7 +323,7 @@ float abs(float a) {
 /*
  * Update the camera location
  */
-void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_color) {
+void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_color, int race_clockwise) {
 
     Mat im;
     int h, c;
@@ -388,18 +388,20 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 
     // Set new centroid
     c = get_centroid(camera_loc->x, camera_loc->y);
-    if  (c > floor(centroids_list.size() * 0.75) && camera_loc->centroid < floor(centroids_list.size() * 0.25)) {
-		car_finished();
+
+    // Check if lap finished 
+    if  ((race_clockwise && c > floor(centroids_list.size() * 0.75) && camera_loc->centroid < floor(centroids_list.size() * 0.25)) || (!race_clockwise && camera_loc->centroid > floor(centroids_list.size() * 0.75) && c < floor(centroids_list.size() * 0.25))) {
+	  car_finished();
     }
 
-    // Check clockwise direction 
+    // Check the clockwise direction of the car
     if ( (c > camera_loc->centroid + 3 && !((c > floor(centroids_list.size() * 0.75) && camera_loc->centroid < floor(centroids_list.size() * 0.25)))) || ((camera_loc->centroid > floor(centroids_list.size() * 0.75) && c < floor(centroids_list.size() * 0.25)))) {
 	camera_loc->is_clockwise = 0;
     } else {
 	camera_loc->is_clockwise = 1;
     }
 
-    // Set new direction based on centroids
+    // Get the direction vector of the car
     get_centroid_direction(c, camera_loc->direction, camera_loc->is_clockwise);
 
     // Update

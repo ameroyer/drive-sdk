@@ -36,6 +36,8 @@ float Centroid::get_distance_squared(float a, float b) {
 
 std::vector<Centroid> centroids_list;
 
+
+// Return the direction vector of the car given the current centroid position and the rotation orientation of the car (clockwise or counter clockwise)
 void get_centroid_direction(int id, float direction[2], int clockwise) {
     Centroid centroid = centroids_list[id];
     Centroid nxt_centroid;
@@ -49,6 +51,9 @@ void get_centroid_direction(int id, float direction[2], int clockwise) {
     direction[1] = (nxt_centroid.get_y() - centroid.get_y()) / dst;
 }
 
+
+// Return the distance travelled by a car between centroid b and c, with a negative sign if going in the opposite direction of the race
+// Clockwise indicate wether the RACE is clockwise or not
 float get_distance_vseg(Centroid b, Centroid c, int clockwise) {
 
 	//if clockwise rotation sense
@@ -67,7 +72,11 @@ float get_distance_vseg(Centroid b, Centroid c, int clockwise) {
 	}
 }
 
-// State
+
+
+/***
+* State class
+**/
 Centroid State::get_car() {
     return car;
 }

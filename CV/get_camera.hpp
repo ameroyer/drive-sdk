@@ -70,7 +70,7 @@ extern "C" {
     /**
      * Return locations of object detected on the camera image
      */
-    void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_color);
+    void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_color, int race_clockwise);
     void get_camera_lock_dead_reckon(int time, float result[2]);
     float is_car_finished();
     float get_laptime();

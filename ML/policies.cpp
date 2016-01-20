@@ -258,7 +258,7 @@ float distance_reward_onecar_policy(State s, Action a, State t) {
 	return - 1000.;
     }
 
-    float r = get_distance_vseg(s.get_car(), t.get_car(), 1) - 2;
+    float r = get_distance_vseg(s.get_car(), t.get_car(), 0) - 2;
     if (r < 0) {
 	    r = -100.;
 	}
@@ -278,13 +278,12 @@ float zero_reward_onecar_policy(State s, Action a, State t) {
 	return - 1000.;
     }
 
-    float r = get_distance_vseg(s.get_car(), t.get_car(), 1) - 3;
+    float r = get_distance_vseg(s.get_car(), t.get_car(), 0);
     if (r < 0) {
 	    r = -1000.;
-	} else {
+     } else {
 	r = 0;
      }
-
     return r;    
 }
 
