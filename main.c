@@ -46,6 +46,7 @@ shared_struct* background;                  // Background image
 unsigned char** input_median;               // Store images for background computation
 struct timeval lapstarttime;                // Start time for current time
 static int exit_signal = 0;                 // 1 iff ctrl-C detected
+static int starting_signal = 0;
 
 
 
@@ -157,6 +158,8 @@ void* update_camera_loc(void* aux) {
     int next_bg_update = bg_start - bg_history;
     shared_struct* temp = (shared_struct*) malloc(sizeof(shared_struct));
 
+    // Wait for starting signal
+    while (!starting_signal) {};
 
     /*
      * Update location until receiving exit signal
@@ -175,7 +178,7 @@ void* update_camera_loc(void* aux) {
 	// Compute differential image in temp and update location
 	temp->count = camera_index + 1;
 	sub(shm, background, temp, 80);
-	get_camera_loc(temp, camera_index, verbose, car_color);
+	get_camera_loc(temp, camera_index + 1, verbose, car_color);
 
 	// If needed, save current image for next background update
 	if (camera_index == next_bg_update) {
@@ -280,18 +283,30 @@ int main(int argc, char *argv[]) {
      * Read input parameters
      */
     if(argc<2){
-	fprintf(stderr, "usage: %s car-name [train/test/background/debug] [nbr of opponents] [verbose]\n",argv[0]);
+	fprintf(stderr, "usage: %s car-name [train/test/background/debug] [hour] [minutes] [nbr of opponents]  [verbose]\n",argv[0]);
 	exit(0);
     }
     const char* adapter = "hci0";
     const char* car_id  = get_car_mac(argv[1]);
     const char* car_color  = get_car_color(argv[1]);
+    int hour_start = -1;
+    int minute_start = -1;
     int mode = 0; // [0 train, 1 deterministic policy, 2 trained policy, 3 compute background, 4 debug]
     int opponents = 3;
+    int verbose = 0;
     if (argc > 2) {
 	mode = atoi(argv[2]);
 	if (argc > 3) {
-	    opponents = atoi(argv[2]);
+	    hour_start = atoi(argv[3]);
+	    if (argc > 4) {
+		minute_start = atoi(argv[4]);
+	        if (argc > 5) {
+	            opponents = atoi(argv[5]);
+		    if (argc > 6) {
+			verbose = 1;
+		    }
+	        }
+	    }
 	}
     }
 
@@ -299,7 +314,7 @@ int main(int argc, char *argv[]) {
      * Load thread for camera update and processing
      */
     gettimeofday(&lapstarttime, NULL);
-    struct arg_struct camera_args = {car_color, 1000 * camera_update, 1000 * background_update, background_start, background_history, opponents, argc > 4};
+    struct arg_struct camera_args = {car_color, 1000 * camera_update, 1000 * background_update, background_start, background_history, opponents, verbose};
     int ret = pthread_create (&camera, 0, update_camera_loc,  &camera_args);
 
 
@@ -309,7 +324,7 @@ int main(int argc, char *argv[]) {
 
     // Init bluethooth and wait for connection successful
     fprintf(stderr, "Attempting connection to %s\n", car_id);
-    h = anki_s_init(adapter, car_id, argc>4);
+    h = anki_s_init(adapter, car_id, verbose);
     fprintf(stderr, "Connection successful\n");
 
     // Additional parameters
@@ -319,16 +334,25 @@ int main(int argc, char *argv[]) {
     float totaltime = 0.;
     float minlaptime = 50.;
 
-    // DEBUG
-     //res = anki_s_set_speed(h, 700, 5000);
-     //AnkiHandle h2 = anki_s_init(adapter, "EB:0D:D8:05:CA:1A", argc>4);
-     //res = anki_s_set_speed(h2, 500, 5000);
-     //usleep(50*1000000);
+
+    /*
+     * ============================= 0. DEBUG Mode for detection - run several cars on track
+     */
+    if (mode == 4) {
+     starting_signal = 1;
+     res = anki_s_set_speed(h, 700, 5000);
+     AnkiHandle h2 = anki_s_init(adapter, "EB:0D:D8:05:CA:1A", verbose);
+     res = anki_s_set_speed(h2, 500, 5000);
+     usleep(10*1000000);
+     anki_s_close(h);
+     anki_s_close(h2);
+    }
 
     /*
      * ============================= 1. Compute default background
      */
-    if (mode == 3) {
+    else if (mode == 3) {
+        starting_signal = 1;
 	printf("[Running...]\n");
         res = anki_s_set_speed(h, 700, 5000);
 	sleep(10);
@@ -358,7 +382,17 @@ int main(int argc, char *argv[]) {
 	    init_trained_policy("/home/cvml1/Code/TrainRuns/Training_NoRnd_ExploreSpeed/policy_table_70.txt");
 	}
 
+        // Starts at timestamp if given	
+	time_t secs = time(0);
+	struct tm *local = localtime(&secs);
+	printf("[Waiting for start time....]\n");
+        while ((hour_start  - local->tm_hour) > 0 || (minute_start - local->tm_min) > 0) {
+          secs = time(0);
+          local = localtime(&secs);
+	}
+     
 	// Start
+        starting_signal = 1;
 	res = anki_s_set_speed(h, 1700, 5000);
 	camera_loc->real_speed = 1700;
 
@@ -408,6 +442,9 @@ int main(int argc, char *argv[]) {
 	//init_trained_policy("/home/cvml1/Code/TrainRuns/Training_1801/policy_table_301.txt");
 	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
 	export_policy_table(0,  "/home/cvml1/Code/TrainRuns/");
+
+	//Start
+        starting_signal = 1;
 	res = anki_s_set_speed(h, 1200, 2000);
 	camera_loc->real_speed = 1200;
 	int episode, step;

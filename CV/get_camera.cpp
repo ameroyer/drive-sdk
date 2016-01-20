@@ -192,7 +192,9 @@ void init_blob_detector() {
  * Return the most likely color name associated to some value
  */
 const char* get_car_from_hue(int h) {
-    if (h < 30 || h > 270) {
+    if ( h < 0 || h > 360) {
+	return "error";
+    } if (h < 30 || h > 270) {
 	return "red";
     } else if (h < 50) {
 	return "orange";
@@ -202,7 +204,7 @@ const char* get_car_from_hue(int h) {
 	return "green";
     } else {
 	return "blue";
-    }
+    } 
 }
 
 /*
@@ -335,7 +337,9 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 
     // Predict our car's future position [Dead Reckoning]
     float dead_reckon_x = camera_loc->x + camera_loc->speed * (index - camera_loc->update_time) * camera_loc->direction[0];
-    float dead_reckon_y = camera_loc->y = camera_loc->y + camera_loc->speed * (index - camera_loc->update_time) * camera_loc->direction[1];
+    float dead_reckon_y = camera_loc->y + camera_loc->speed * (index - camera_loc->update_time) * camera_loc->direction[1];
+    //std::cout << "\n Deadreckon (" << dead_reckon_x<< ", " << dead_reckon_y << ")\n";
+    //std::cout << camera_loc->x << " " << camera_loc->speed << " " << index << " " << camera_loc->update_time << " " <<camera_loc->direction[0] << "\n";
 
     // Identify object on track closest to our hue and predicted position
     camera_loc->success = 0;
@@ -346,6 +350,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 	if (!strcmp(get_car_from_hue(h), car_color) || camera_obst->total == 0) {
 	   camera_loc->success = 1;
 	}
+	//std::cout << "Keypoint " << h << " (" << get_car_from_hue(h) << ")";
 
 	if (dist < closest_dist) {
 	    // Place old minima as obstacle if existing
