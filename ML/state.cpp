@@ -93,34 +93,42 @@ int State::get_carid() {
  * General policies
  */
 
-//find action that maximizes the score for state s
+// Find action that maximizes the score for state s
 Action Policy::get_next_action(State s) {
     float max = -100;
-    Action best;
-    Action act;
+    std::vector<Action> best;
     for(std::map<Action, float>::iterator iterator = qscores[s].begin(); iterator != qscores[s].end(); iterator++) {
-		act=iterator->first;
-		//printf("type: %d, score: %f ",act.get_type(),iterator->second);
 	if (iterator->second > max) {
 	    max = iterator->second;
-	    best = iterator->first;
+	    best.clear();
+	    best.push_back(iterator->first);
+	} else if (iterator->second == max) {
+	    best.push_back(iterator->first);
 	}
     }
-    //printf("best score: %f, best type: %d ", max, best.get_type()); 
-    return best;
+
+    std::cout << best.size() << qscores[s].size();
+    std::cout << "Best score: " << max << " and Action: " << best.at(0).to_string() << "\n";
+    // If several actions with equal scores, choose at random
+    if (best.size() == 0) {
+	return best.at(0);
+    } else {
+	return best.at(rand() % best.size());
+    }
 }
 
+// Return a random action for a given state
 Action Policy::get_random_action(State s) { 
-    int index = rand() % (qscores[s].size()+1); //+1 important so that change lane outside get selected too
-    //printf(" qsize: %d rand: %d ",qscores[s].size(),index);
+    int index = rand() % (qscores[s].size()); //+1 important so that change lane outside get selected too
     for(std::map<Action, float>::iterator iterator = qscores[s].begin(); iterator != qscores[s].end(); iterator++) {
-	index -= 1;
-	if (index <= 0) {
-	   return iterator->first;
+	index --;
+	if (index < 0) {
+	    return iterator->first;
 	}
     }
 }
 
+// Return the best score for a given state (maximum over actions)
 float Policy::get_best_score(State s) {
     float max = 0;
     for(std::map<Action, float>::iterator iterator = qscores[s].begin(); iterator != qscores[s].end(); iterator++) {
@@ -131,11 +139,12 @@ float Policy::get_best_score(State s) {
     return max;
 }
 
-
+// Set the q value for a given (state, action) pair
 void Policy::set_score(State s, Action a, float value) {
     qscores[s][a] = value;
 }
 
+// Retrieve the q value for a given (state, action) pair
 float Policy::get_score(State s, Action a) {
     return qscores[s][a];
 }

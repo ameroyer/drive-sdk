@@ -16,7 +16,7 @@ static Action previous_action;
 static std::vector<State> run;
 static std::vector<Action> run_actions;
 static float epsilon = 1.0;
-
+static int deterministic;
 
 
 /**
@@ -75,14 +75,20 @@ void export_policy_table(int current_episode, char* output_dir) {
 // Init a deterministic fixed policy (see states.cpp)
 void init_det_one_car_policy() {
     pidet = DetOneCarPolicy();
+    deterministic = 1;
 }
 
 
 int apply_policy(AnkiHandle h, camera_localization_t c) {
     //Choose best action from policy and apply
     if(c.centroid>=0){
-	State s(centroids_list[c.centroid], c.real_speed);
-	return pidet.get_next_action(s).apply(h);
+	if (deterministic) {
+	  State s(centroids_list[c.centroid], c.real_speed);
+	  return pidet.get_next_action(s).apply(h);
+	} else {
+	  State s(centroids_list[c.centroid], c.real_speed);
+	  return pi.get_next_action(s).apply(h);
+	}
     }
     return 0;
 }
@@ -91,15 +97,17 @@ int apply_policy(AnkiHandle h, camera_localization_t c) {
 /* 
  Load a policy stored in a file
 */
+// TODO action order (-100, 1000 ?)
 //TODO: fix first line for export and import (state 0)
 void init_trained_policy(char* filename) {
     pi = Policy(); 
+    deterministic = 0;
     
     int speed_values[] = {1200, 1700};
-    int offset_values[] = {1000, -1000};
-    float lanespeed = 200;
+    int offset_values[] = {-1000, 1000};
+    float lanespeed = 150;
     float accel = 2000;
-    epsilon=0.1;
+    epsilon = 0.1;
     
     //Define states (same as init_totrain_onecar_policy!)
     for(std::vector<Centroid>::iterator it = centroids_list.begin(); it != centroids_list.end(); ++it) {
@@ -146,8 +154,10 @@ void init_trained_policy(char* filename) {
 	linenr=0;  
 	for(std::vector<State>::iterator its = states_list.begin(); its != states_list.end(); ++its) {
 		std::vector<float> qvalues_state=qvalue_table.at(linenr);
+		//std::cout << its->to_string() << "\n";
 		int actionnr=0;
 		for(std::vector<Action>::iterator ita = actions_list.begin(); ita != actions_list.end(); ++ita) {
+		//std::cout << ita->to_string() << linenr << actions_list.size() <<"\n";
 			if(qvalues_state.size()>0){
 				//printf("\n %f", qvalues_state.at(actionnr));
 				pi.set_score(*its, *ita, qvalues_state.at(actionnr));
@@ -170,7 +180,7 @@ void init_trained_policy(char* filename) {
 void init_totrain_onecar_policy(float initepsilon) {
     pi = Policy();
     epsilon = initepsilon;
-    int speed_values[] = {1100, 1600};
+    int speed_values[] = {1200, 1700};
     int offset_values[] = {1000, -1000};
     float lanespeed = 150;
     float accel = 2000;
@@ -202,7 +212,7 @@ void init_totrain_onecar_policy(float initepsilon) {
 	        if ((ita->get_type() == 1 && ita->get_speed() > its->get_speed()) || (ita->get_type() == 2 && its->get_lane() < 3 && ita->get_offset() < 0)) {
 	            pi.set_score(*its, *ita, 0.);
 	        } else if ((ita->get_type() == 1 && ita->get_speed() <= its->get_speed()) || (ita->get_type() == 2 && its->get_lane() == 3))  {
-	            pi.set_score(*its, *ita, -2.);
+	            pi.set_score(*its, *ita, 0.);
 	        } else {
 		    pi.set_score(*its, *ita, 0.);
                 }
@@ -212,11 +222,15 @@ void init_totrain_onecar_policy(float initepsilon) {
 	        if ((ita->get_type() == 1 && ita->get_speed() < its->get_speed()) || (ita->get_type() == 2 && its->get_lane() > 2 && ita->get_offset() > 0)) {
 		    pi.set_score(*its, *ita, 0.);
 	        } else if ((ita->get_type() == 1 && ita->get_speed() >= its->get_speed()) || (ita->get_type() == 2 && its->get_lane() != 2 && ita->get_offset() != 0))  {
-	            pi.set_score(*its, *ita, -2.);
+	            pi.set_score(*its, *ita, 0.);
 	        } else {
 	            pi.set_score(*its, *ita, 0.);
                 }	
             } 
+
+	    if (ita->get_type() == 2 && its->get_lane() < 3 && ita->get_offset() < 0) {
+		pi.set_score(*its, *ita, 1.);
+	    }
 	    // Constraint  the car to stay in the track
 	    if (ita->get_type() == 2 && ( (ita->get_offset() < 0 && its->get_lane() == 3) || (ita->get_offset() > 0 && its->get_lane() == 0) ) ) {
 		pi.set_score(*its, *ita, -10.);
@@ -244,7 +258,7 @@ float distance_reward_onecar_policy(State s, Action a, State t) {
 	return - 1000.;
     }
 
-    float r = get_distance_vseg(s.get_car(), t.get_car(), 1) - 3;
+    float r = get_distance_vseg(s.get_car(), t.get_car(), 1) - 2;
     if (r < 0) {
 	    r = -100.;
 	}
@@ -264,12 +278,14 @@ float zero_reward_onecar_policy(State s, Action a, State t) {
 	return - 1000.;
     }
 
-    float r = get_distance_vseg(s.get_car(), t.get_car(), 1);
+    float r = get_distance_vseg(s.get_car(), t.get_car(), 1) - 3;
     if (r < 0) {
 	    r = -1000.;
-	}
+	} else {
+	r = 0;
+     }
 
-    return 0;    
+    return r;    
 }
 
 
@@ -283,7 +299,7 @@ void update_policy_afterlap(float laptime, float learning_rate, float discount_f
     //update q-values for all steps of this run [Back propagation]
     int i;
     for(i = run.size() - 1; i >= 0; i--) {
-       float new_score = learning_rate * reward; // + pi.get_score(run[i], run_actions[i]) * (1. - learning_rate) ;
+       float new_score = learning_rate * reward + pi.get_score(run[i], run_actions[i]); // * (1. - learning_rate) ;
        pi.set_score(run[i], run_actions[i], new_score);
     }
 }
@@ -291,31 +307,32 @@ void update_policy_afterlap(float laptime, float learning_rate, float discount_f
 
 // Apply best/epsilon-best action and update policy based on previous state
 int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learning_rate, float discount_factor, float epsilondecay, int distance_reward) {
-    // Get state
-    State s(centroids_list[c.centroid], c.real_speed);
-    run.push_back(s);
 
     //If not first state, update policy
+    State s(centroids_list[c.centroid], c.real_speed);
     if (run.size() > 0) {
 
 	float reward = 0;
-	if (distance_reward) {
+	if (distance_reward == 1) {
 	  reward = distance_reward_onecar_policy(previous_state, previous_action, s);
 	} else {
 	  reward = zero_reward_onecar_policy(previous_state, previous_action, s);
 	}
 
 	pi.set_score(previous_state, previous_action, pi.get_score(previous_state, previous_action) * (1. - learning_rate) + learning_rate * discount_factor * pi.get_best_score(s) + learning_rate * reward);
-        //fprintf(stderr, "Reward %f", reward);
+        fprintf(stderr, "New score %f ", pi.get_score(previous_state, previous_action) * (1. - learning_rate) + learning_rate * discount_factor * pi.get_best_score(s) + learning_rate * reward);
     }
 
+
+    // Get state
+    run.push_back(s);
 
     //Choose best action (epsilon greedy with decay)  
     if (epsilon > 0.1) {
 	epsilon *= epsilondecay;
-    } else {
-	epsilon = 0.1;
-    }
+    } //else {
+//	epsilon = 0.1;
+ //   }
     float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
     if (r < epsilon) {
 	previous_action = pi.get_random_action(s);        
@@ -325,7 +342,13 @@ int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learn
 
     // Store state and action
     previous_state = s;
+    // Test = no action in even step number
+    if (run.size() % 2 == 0) {
+       previous_action = Action();
+    } 
     run_actions.push_back(previous_action);
+	
+	
     return previous_action.apply(h);
 }
 

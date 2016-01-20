@@ -260,11 +260,11 @@ int main(int argc, char *argv[]) {
      * Hyper parameters
      */
     float camera_update = 0.04; // Update of the camera picture, in percent of seconds
-    float control_update = 0.2; // Update of the vehicle action, `` `` ``
+    float control_update = 0.15; // Update of the vehicle action, `` `` ``
     float background_update = 5; // Update of the background, `` `` ``
     int background_start = 20;  // Index at which the background computation starts
     int background_history = 10; // Number of images to use for median computation
-    int nlap = 5; // Number of laps before the car stops
+    int nlap = 10; // Number of laps before the car stops
 
 
     /*
@@ -273,7 +273,7 @@ int main(int argc, char *argv[]) {
     int training = 1;
     int nepisodes = 101;
     int nsteps = 1000;
-    float learning_rate = 0.7;
+    float learning_rate = 0.4;
     float discount_factor = 0.95;
     float epsilon_decay = 0.8;
 
@@ -323,11 +323,12 @@ int main(int argc, char *argv[]) {
      */
     if (!training) {
 	// Initialize a policy
-	init_det_one_car_policy();
+	//init_det_one_car_policy();
+	init_trained_policy("/home/cvml1/Code/TrainRuns/Training_NoRnd_ExploreSpeed/policy_table_70.txt");
 
 	// Start
-	res = anki_s_set_speed(h, 1500, 5000);
-	camera_loc->real_speed = 1500;
+	res = anki_s_set_speed(h, 1700, 5000);
+	camera_loc->real_speed = 1700;
 
 	while (kbint && !res && nlap > 0) {
 	    // Display
@@ -349,6 +350,7 @@ int main(int argc, char *argv[]) {
 	    // Check direction and perform uturn if false
 	    if(!camera_loc->is_clockwise){
 		anki_s_uturn(h);
+			while(!camera_loc->is_clockwise) {};
 		fprintf(stderr, "U-turn\n");
 	    }
 
@@ -370,12 +372,14 @@ int main(int argc, char *argv[]) {
      */
     else {
 	//Initialize
-	init_totrain_onecar_policy(0.1);
-	//init_trained_policy("/home/cvml1/Code/TrainRuns/TrainingLap1h/policy_table_50.txt");
+	init_totrain_onecar_policy(0.);
+	//init_trained_policy("/home/cvml1/Code/TrainRuns/Training_1801/policy_table_301.txt");
+	//init_trained_policy("/home/cvml1/Code/TrainRuns/policy_table_0.txt");
+	//init_trained_policy("/home/cvml1/Code/TrainRuns/trained_policy_new.txt");
 	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
 	export_policy_table(0,  "/home/cvml1/Code/TrainRuns/");
-	res = anki_s_set_speed(h, 1100, 2000);
-	camera_loc->real_speed = 1100;
+	res = anki_s_set_speed(h, 1200, 2000);
+	camera_loc->real_speed = 1200;
 	int episode, step;
 
 	// Start episode
@@ -397,12 +401,13 @@ int main(int argc, char *argv[]) {
 			while(!camera_loc->is_clockwise) {};
 		    fprintf(stderr, KMAG "U-turn\n" RESET);
 		    run_index += 1;
-		    usleep(2 * control_update * 1000000);
+		    usleep(1 * 1000000);
 		    break;
 		}
 
 		// Apply policy decsion (.., .. , learning_rate, discount_factor, epsilondecay, with reward based on distance [1] or 0 reward [0])
-		res = apply_policy_trainingmode(h, *camera_loc, learning_rate, discount_factor, epsilon_decay, 1);
+		//res = apply_policy_trainingmode(h, *camera_loc, learning_rate, discount_factor, epsilon_decay, 1);
+		res = apply_policy_trainingmode(h, *camera_loc, learning_rate, discount_factor, epsilon_decay, 0);
 		if (res < 0) { // update real speed
 		    camera_loc->real_speed = - res;
 		    res = 0;
@@ -448,9 +453,10 @@ int main(int argc, char *argv[]) {
 	    }
 	}
 
+	    if (kbint && !res) {
 	// Save policy
 	export_policy(nepisodes, "/home/cvml1/Code/TrainRuns/");
-	export_policy_table(nepisodes, "/home/cvml1/Code/TrainRuns/");
+	export_policy_table(nepisodes, "/home/cvml1/Code/TrainRuns/"); }
     }
 
 
@@ -459,6 +465,7 @@ int main(int argc, char *argv[]) {
      */
     printf("\n   > Total time elapsed: %f\n", totaltime);
     printf("   > Minimum lap time: %f\n", minlaptime);
+    printf("Close\n");
     exit_signal = 1;
     anki_s_close(h);
     pthread_join(camera, NULL);
