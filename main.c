@@ -19,6 +19,7 @@
 #include <signal.h>
 #include <time.h>
 
+
 // Bash colors
 #define KNRM  "\x1B[0m"
 #define KRED  "\x1B[31m"
@@ -35,16 +36,16 @@
 /**
  * Global variables
  */
-static int camera_index = 0; //index for camera update
-static int run_index = 0; //index for global simulation update
-static int exit_signal = 0;
-static pthread_t camera; // Thread running the camera detection
+static int camera_index = 0;    //index for camera update
+static int run_index = 0;       //index for global simulation update
+static pthread_t camera;        // Thread running the camera detection
 static AnkiHandle h;
-camera_localization_t* camera_loc;
-camera_obst_localization_t* camera_obst;
-shared_struct* background;
-unsigned char** input_median;
-struct timeval lapstarttime;
+camera_localization_t* camera_loc;          // Vehicle's position
+camera_obst_localization_t* camera_obst;    // Obstacles position
+shared_struct* background;                  // Background image
+unsigned char** input_median;               // Store images for background computation
+struct timeval lapstarttime;                // Start time for current time
+static int exit_signal = 0;                 // 1 iff ctrl-C detected
 
 
 
@@ -64,7 +65,7 @@ static void intHandler(int sig) {
 void print_loc(AnkiHandle h){
     localization_t loc;
     loc = anki_s_get_localization(h);
-    printf(KBLU "[Loc]" RESET " segm: %03x subsegm: %03x clock-wise: %i last-update: %i\n", loc.segm, loc.subsegm, loc.is_clockwise, loc.update_time);
+    printf(KBLU "[Loc]" RESET " Segm (%03x, %03x) clock-wise: %i, [update: %i]\n", loc.segm, loc.subsegm, loc.is_clockwise, loc.update_time);
 }
 
 
@@ -318,6 +319,13 @@ int main(int argc, char *argv[]) {
     float laptime=-1.;
     float totaltime = 0.;
     float minlaptime = 50.;
+
+    // DEBUG
+     res = anki_s_set_speed(h, 700, 5000);
+     AnkiHandle h2 = anki_s_init(adapter, "EB:0D:D8:05:CA:1A", argc>4);
+     res = anki_s_set_speed(h2, 500, 5000);
+     usleep(50*1000000);
+
     /*
      * 1. First: normal (non trainng) mode
      */
@@ -374,8 +382,6 @@ int main(int argc, char *argv[]) {
 	//Initialize
 	init_totrain_onecar_policy(0.);
 	//init_trained_policy("/home/cvml1/Code/TrainRuns/Training_1801/policy_table_301.txt");
-	//init_trained_policy("/home/cvml1/Code/TrainRuns/policy_table_0.txt");
-	//init_trained_policy("/home/cvml1/Code/TrainRuns/trained_policy_new.txt");
 	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
 	export_policy_table(0,  "/home/cvml1/Code/TrainRuns/");
 	res = anki_s_set_speed(h, 1200, 2000);

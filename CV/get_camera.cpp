@@ -51,10 +51,11 @@ static int ppm_width = 1696;
 static int ppm_height = 720;
 static float laptime=-1.;
 static struct timeval lapfinishtime;
+float maxdist = sqrt(pow(ppm_width, 2) + pow(ppm_height, 2));
 
 
 /**
- * car_finished: call when the camera detects the car crosses the finish line
+ * car_finished: Compute the time elapsed when the camera detects the car crosses the finish line
  */
 void car_finished() {
     gettimeofday(&lapfinishtime, NULL);
@@ -63,7 +64,7 @@ void car_finished() {
 }
 
 /**
- * is_car_finished: return the most recent laptime, or 0 if the car is still in a lap
+ * is_car_finished: return the most recent computed laptime, or 0 if the car is still in a lap
  */
 float is_car_finished() {
     float res;
@@ -161,6 +162,8 @@ void compute_median(int nfiles, unsigned char** array, shared_struct* result) {
     }
     fprintf(stderr, "Background update - end\n");
 }
+
+
 
 
 /**
@@ -298,6 +301,23 @@ int get_centroid(float x, float y) {
     return result;
 }
 
+
+float min(float a, float b) {
+  if (a < b) {
+    return a;
+  } else {
+    return b;
+  }
+}
+
+float abs(float a) {
+  if (a < 0) {
+    return -a;
+  } else {
+    return a;
+  }
+}
+
 /*
  * Update the camera location
  */
@@ -305,6 +325,8 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 
     Mat im;
     int h, c;
+    float dist, closest_dist;
+    KeyPoint closest_obj;
     int obst = 0;
 
     // OpenCV Detection
@@ -312,38 +334,52 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     detector->detect(im, keypoints);
 
     // Predict our car's future position [Dead Reckoning]
-    //float dead_reckon_x = camera_loc->x + camera_loc->speed * (index - camera_loc->update_time) * camera_loc->direction[0];
-    
+    float dead_reckon_x = camera_loc->x + camera_loc->speed * (index - camera_loc->update_time) * camera_loc->direction[0];
+    float dead_reckon_y = camera_loc->y = camera_loc->y + camera_loc->speed * (index - camera_loc->update_time) * camera_loc->direction[1];
 
-    // Identify our car [closest in color and in predicted position]
+    // Identify object on track closest to our hue and predicted position
     camera_loc->success = 0;
+    closest_dist = 100.;
     for(std::vector<KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
-	h = get_mean_hue(shm->data, (int) (*it).pt.x, (int) (*it).pt.y, (int) (0.5 * (*it).size));
-
-	// If no opponents, or if hue matches our car, take this centroid
-	if (camera_obst->total == 0 || !strcmp(get_car_from_hue(h), car_color)) {
-	    // Update speed
-	    camera_loc->speed = sqrt( pow((*it).pt.x - camera_loc-> x, 2) + pow((*it).pt.y - camera_loc-> y, 2))  / (index - camera_loc->update_time);
-	    // Update position
-	    camera_loc->x = (*it).pt.x;
-	    camera_loc->y = (*it).pt.y;
-	    camera_loc->size = (*it).size;
-	    camera_loc->success = 1;
+	h = get_mean_hue(shm->data, (int) it->pt.x, (int) it->pt.y, (int) (0.5 * it->size));
+        dist = sqrt( pow(it->pt.x - dead_reckon_x, 2) +  pow(it->pt.y - dead_reckon_y, 2)) / maxdist + min(abs(h - 15), abs(h - 315)) / 360.;
+	if (!strcmp(get_car_from_hue(h), car_color)) {
+	   camera_loc->success = 1;
 	}
-	// Else detect as obsatcle
-	else if (obst < camera_obst->total) {
-	    camera_obst->obst[obst*3] = (*it).pt.x;
-	    camera_obst->obst[obst*3 + 1] = (*it).pt.y;
-	    camera_obst->obst[obst*3 + 2] = (*it).size;
-	    camera_obst->centroids[obst] = get_centroid((*it).pt.x, (*it).pt.y);
-	}
-    }
 
-    // If our car was not found, set coordinates with dead reckoning
+	if (dist < closest_dist) {
+	    // Place old minima as obstacle if existing
+	    if (closest_dist < 100.) {
+	      camera_obst->obst[obst*3] = closest_obj.pt.x;
+	      camera_obst->obst[obst*3 + 1] = closest_obj.pt.y;
+	      camera_obst->obst[obst*3 + 2] = closest_obj.size;
+	      camera_obst->centroids[obst] = get_centroid(closest_obj.pt.x, closest_obj.pt.y);
+              obst++;
+	    }
+	    // Update minimum
+	    closest_obj = *it;
+	    closest_dist = dist;
+		
+	} else {
+	    // Write obstacle
+	    camera_obst->obst[obst*3] = it->pt.x;
+	    camera_obst->obst[obst*3 + 1] = it->pt.y;
+	    camera_obst->obst[obst*3 + 2] = it->size;
+	    camera_obst->centroids[obst] = get_centroid(it->pt.x, it->pt.y);
+	    obst++;
+	}
+    }	
+
+    // Set our cars coordinates
     if (!camera_loc->success) {
-	camera_loc->x = camera_loc->x + camera_loc->speed * (index - camera_loc->update_time) * camera_loc->direction[0];
-	camera_loc->y = camera_loc->y + camera_loc->speed * (index - camera_loc->update_time) * camera_loc->direction[1];
-    }
+	camera_loc->x = dead_reckon_x;
+	camera_loc->y = dead_reckon_y;
+    } else {
+        camera_loc->speed = sqrt( pow(closest_obj.pt.x - camera_loc-> x, 2) + pow(closest_obj.pt.y - camera_loc-> y, 2))  / (index - camera_loc->update_time);
+	camera_loc->x = closest_obj.pt.x;
+	camera_loc->y = closest_obj.pt.y;
+	camera_loc->size = closest_obj.size;
+   }
 
     // Set new centroid
     c = get_centroid(camera_loc->x, camera_loc->y);
@@ -352,8 +388,6 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     }
 
     // Check clockwise direction 
-   // if ( (c < camera_loc->centroid - 3 && c > floor(centroids_list.size() * 0.75) &&  camera_loc->centroid < floor(centroids_list.size() * 0.25)) || (c > camera_loc->centroid + 3 && !(c > floor(centroids_list.size() * 0.75) &&  camera_loc->centroid < floor(centroids_list.size() * 0.25)) )) {
-
     if ( (c > camera_loc->centroid + 3 && !((c > floor(centroids_list.size() * 0.75) && camera_loc->centroid < floor(centroids_list.size() * 0.25)))) || ((camera_loc->centroid > floor(centroids_list.size() * 0.75) && c < floor(centroids_list.size() * 0.25)))) {
 	camera_loc->is_clockwise = 0;
     } else {
@@ -372,15 +406,17 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     // Additional verbose output
     if (verbose) {
 	// Draw
-	Mat track = imread("/home/cvml1/Code/CV/discretized_track_h75_v4.png", CV_LOAD_IMAGE_COLOR);
+	Mat track = imread("/home/cvml1/Code/CV/discretized_track_h40_v4.png", CV_LOAD_IMAGE_COLOR);
     	Mat output = Mat(ppm_height, ppm_width, CV_8UC3, shm->data);
 	addWeighted(output, 0.8, track, 0.2, 0, output);
-	drawKeypoints(output, keypoints, output, Scalar(255, 0, 0), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+	drawKeypoints(output, keypoints, output, Scalar(255, 255, 0), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 	Centroid cent = centroids_list[c];
-	circle(output, Point(cent.get_x(), cent.get_y()), 8, Scalar(255, 0, 0), -1);
-	circle(output, Point(camera_loc->x, camera_loc->y), 5, Scalar(255, 100, 255), -1);
-	line(output, Point(camera_loc->x, camera_loc->y), Point(camera_loc->x + camera_loc->speed * camera_loc->direction[0], camera_loc->y + camera_loc->speed * camera_loc->direction[1]), Scalar(255, 100, 255), 2);
+	circle(output, Point(cent.get_x(), cent.get_y()), 3, Scalar(255, 100, 255), -1);
+	circle(output, Point(camera_loc->x, camera_loc->y), 8, Scalar(255, 0, 0), -1);
+	line(output, Point(camera_loc->x, camera_loc->y), Point(camera_loc->x + camera_loc->speed * camera_loc->direction[0], camera_loc->y + camera_loc->speed * camera_loc->direction[1]), Scalar(255, 0, 0), 2);
     	cvtColor(output, output, COLOR_BGR2RGB);
+	
+
 	// Write
 	char filename[256];
 	snprintf(filename, 255, "/home/cvml1/Code/Images/KPfc2TestImage%08ld.ppm", shm->count);
