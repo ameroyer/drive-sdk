@@ -146,10 +146,9 @@ void* update_camera_loc(void* aux) {
     // Load background
     background = (shared_struct*) malloc(sizeof(shared_struct));
     background->count = 0;
-    //FILE *f = fopen("/home/cvml1/Code/Images/default_background.txt", "rb");
-    //fread(background->data, IMAGE_SIZE, 1, f);
-    //fclose(f);
-    memcpy(background->data, shm->data, IMAGE_SIZE);
+    FILE *f = fopen("/home/cvml1/Code/Images/default_background.txt", "rb");
+    fread(background->data, IMAGE_SIZE, 1, f);
+    fclose(f);
 
 
     // Additional Paramaters
@@ -260,18 +259,17 @@ int main(int argc, char *argv[]) {
     /*
      * Hyper parameters
      */
-    float camera_update = 0.04; // Update of the camera picture, in percent of seconds
-    float control_update = 0.15; // Update of the vehicle action, `` `` ``
-    float background_update = 5; // Update of the background, `` `` ``
-    int background_start = 20;  // Index at which the background computation starts
-    int background_history = 10; // Number of images to use for median computation
-    int nlap = 10; // Number of laps before the car stops
+    float camera_update = 0.05;   // Update of the camera picture, in percent of seconds
+    float control_update = 0.15;  // Update of the vehicle action, `` `` ``
+    float background_update = 5;  // Update of the background, `` `` ``
+    int background_start = 80;    // Index at which the background computation starts
+    int background_history = 15;  // Number of images to use for median computation
+    int nlap = 10;                // Number of laps before the car stops
 
 
     /*
      * Training parameters
      */
-    int training = 1;
     int nepisodes = 101;
     int nsteps = 1000;
     float learning_rate = 0.4;
@@ -282,17 +280,18 @@ int main(int argc, char *argv[]) {
      * Read input parameters
      */
     if(argc<2){
-	fprintf(stderr, "usage: %s car-name [nbr of opponents] [adaptater] [verbose]\n",argv[0]);
+	fprintf(stderr, "usage: %s car-name [train/test/background/debug] [nbr of opponents] [verbose]\n",argv[0]);
 	exit(0);
     }
     const char* adapter = "hci0";
     const char* car_id  = get_car_mac(argv[1]);
     const char* car_color  = get_car_color(argv[1]);
+    int mode = 0; // [0 train, 1 deterministic policy, 2 trained policy, 3 compute background, 4 debug]
     int opponents = 3;
     if (argc > 2) {
-	opponents = atoi(argv[2]);
+	mode = atoi(argv[2]);
 	if (argc > 3) {
-	    adapter = argv[3];
+	    opponents = atoi(argv[2]);
 	}
     }
 
@@ -321,18 +320,43 @@ int main(int argc, char *argv[]) {
     float minlaptime = 50.;
 
     // DEBUG
-     res = anki_s_set_speed(h, 700, 5000);
-     AnkiHandle h2 = anki_s_init(adapter, "EB:0D:D8:05:CA:1A", argc>4);
-     res = anki_s_set_speed(h2, 500, 5000);
-     usleep(50*1000000);
+     //res = anki_s_set_speed(h, 700, 5000);
+     //AnkiHandle h2 = anki_s_init(adapter, "EB:0D:D8:05:CA:1A", argc>4);
+     //res = anki_s_set_speed(h2, 500, 5000);
+     //usleep(50*1000000);
 
     /*
-     * 1. First: normal (non trainng) mode
+     * ============================= 1. Compute default background
      */
-    if (!training) {
-	// Initialize a policy
-	//init_det_one_car_policy();
-	init_trained_policy("/home/cvml1/Code/TrainRuns/Training_NoRnd_ExploreSpeed/policy_table_70.txt");
+    if (mode == 3) {
+	printf("[Running...]\n");
+        res = anki_s_set_speed(h, 700, 5000);
+	sleep(10);
+	printf("Storing background\n");
+	// Export text	
+        FILE *fid = fopen("/home/cvml1/Code/Images/default_background.txt", "wb");
+        int res = fwrite(background, 1920*1200*3, 1, fid);
+        fclose(fid);
+	// Export ppm
+        char PPMheader[32];
+        snprintf(PPMheader, 31, "P6\n%d %d 255\n", 1696, 720);
+        fid = fopen("/home/cvml1/Code/Images/default_background.ppm", "wb");
+        res = fwrite(PPMheader, strlen(PPMheader), 1, fid);
+        res = fwrite(background, 1920*1200*3, 1, fid);
+        fclose(fid);
+    }
+    /*
+     * ============================= 2. Policy mode
+     */
+    else if (mode == 1 || mode == 2) {
+	// Initialize a deterministic policy
+	if (mode == 1) {
+	   init_det_one_car_policy();
+        } 
+	// Initialize trained policy
+	else {
+	    init_trained_policy("/home/cvml1/Code/TrainRuns/Training_NoRnd_ExploreSpeed/policy_table_70.txt");
+	}
 
 	// Start
 	res = anki_s_set_speed(h, 1700, 5000);
@@ -365,7 +389,7 @@ int main(int argc, char *argv[]) {
 
 	    // Apply deterministic policy decsion
 	    res = apply_policy(h, *camera_loc);
-	    if (res < 0) { // changed speed
+	    if (res < 0) { // update real speed
 		camera_loc->real_speed = - res;
 		res = 0;
 	    }
@@ -376,9 +400,9 @@ int main(int argc, char *argv[]) {
 	}
     }
     /*
-     * 2. Or: training mode
+     * ======================================== 3. Training mode
      */
-    else {
+    else if (mode == 0) {
 	//Initialize
 	init_totrain_onecar_policy(0.);
 	//init_trained_policy("/home/cvml1/Code/TrainRuns/Training_1801/policy_table_301.txt");
@@ -390,12 +414,12 @@ int main(int argc, char *argv[]) {
 
 	// Start episode
 	for (episode = 0; episode < nepisodes; episode++) {
-	    fprintf(stderr, KMAG "EPISODE %d \n" RESET,episode);
+	    fprintf(stderr, KMAG "----------------- EPISODE %d" RESET,episode);
     	    gettimeofday(&lapstarttime, NULL);
 
 	    // Start run
 	    for (step = 0; step < nsteps; step++) {
-		fprintf(stderr, "STEP %d \n ",step);
+		fprintf(stderr, "-------- STEP %d ",step);
 		// Display
 		printf("\n");
 		print_loc(h);

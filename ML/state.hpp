@@ -136,14 +136,14 @@ public:
 
     int apply(AnkiHandle h) {
 	if (type == 0) {
-	    std::cerr << "\x1B[36mDEBUG: No action\n\033[0m";
+	    std::cerr << "\x1B[36m" << "DEBUG: No action" << "\n\033[0m" << "\n";
 	    return 0;
 	} else if (type == 1) {
 	    anki_s_set_speed(h, speed, accel);
-	    std::cerr << "\x1B[36mDEBUG: Set speed " << speed << "\n\033[0m";
+	    std::cerr << "\x1B[36m" << "DEBUG: Set speed " << speed << "\n\033[0m" << "\n";
 	    return - speed;
 	} else {
-	    std::cout << "\x1B[36mDEBUG: Change lane with offset " << offset << "\n\033[0m";
+	    std::cout << "\x1B[36m" << "DEBUG: Change lane with offset " << offset << "\n\033[0m" << "\n";
 	    int a = anki_s_change_lane(h, offset, speed, accel);
 	    return a;
 	    //int b = anki_s_cancel_lane_change(h);

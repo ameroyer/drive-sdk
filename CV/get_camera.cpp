@@ -343,7 +343,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     for(std::vector<KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
 	h = get_mean_hue(shm->data, (int) it->pt.x, (int) it->pt.y, (int) (0.5 * it->size));
         dist = sqrt( pow(it->pt.x - dead_reckon_x, 2) +  pow(it->pt.y - dead_reckon_y, 2)) / maxdist + min(abs(h - 15), abs(h - 315)) / 360.;
-	if (!strcmp(get_car_from_hue(h), car_color)) {
+	if (!strcmp(get_car_from_hue(h), car_color) || camera_obst->total == 0) {
 	   camera_loc->success = 1;
 	}
 
@@ -414,8 +414,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 	circle(output, Point(cent.get_x(), cent.get_y()), 3, Scalar(255, 100, 255), -1);
 	circle(output, Point(camera_loc->x, camera_loc->y), 8, Scalar(255, 0, 0), -1);
 	line(output, Point(camera_loc->x, camera_loc->y), Point(camera_loc->x + camera_loc->speed * camera_loc->direction[0], camera_loc->y + camera_loc->speed * camera_loc->direction[1]), Scalar(255, 0, 0), 2);
-    	cvtColor(output, output, COLOR_BGR2RGB);
-	
+    	cvtColor(output, output, COLOR_BGR2RGB);	
 
 	// Write
 	char filename[256];
