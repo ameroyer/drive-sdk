@@ -57,6 +57,9 @@ void get_centroid_direction(int id, float direction[2], int clockwise) {
 float get_distance_vseg(Centroid b, Centroid c, int clockwise) {
 
 	//if clockwise rotation sense
+	if (c.get_vseg() == b.get_vseg()) {
+	   return 0;
+	}
 	if (clockwise) {
     		if (c.get_id() > floor(centroids_list.size() * 0.75) && b.get_id() < floor(centroids_list.size() * 0.25) ) {	    
 			return (b.get_id() - c.get_id() + centroids_list.size()) / 4 + 1;
@@ -116,8 +119,7 @@ Action Policy::get_next_action(State s) {
 	}
     }
 
-    std::cout << best.size() << qscores[s].size();
-    std::cout << "Best score: " << max << " and Action: " << best.at(0).to_string() << "\n";
+    //std::cout << "Best score: " << max <<  "\n"; //" and Action: " << best.at(0).to_string() << "\n";
     // If several actions with equal scores, choose at random
     if (best.size() == 0) {
 	return best.at(0);

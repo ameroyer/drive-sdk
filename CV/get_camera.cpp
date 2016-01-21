@@ -343,7 +343,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 
     // Identify object on track closest to our hue and predicted position
     camera_loc->success = 0;
-    closest_dist = 100.;
+    closest_dist = 10000000.;
     for(std::vector<KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
 	h = get_mean_hue(shm->data, (int) it->pt.x, (int) it->pt.y, (int) (0.5 * it->size));
         dist = sqrt( pow(it->pt.x - dead_reckon_x, 2) +  pow(it->pt.y - dead_reckon_y, 2)) / maxdist + min(abs(h - 15), abs(h - 315)) / 360.;
@@ -354,7 +354,7 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
 
 	if (dist < closest_dist) {
 	    // Place old minima as obstacle if existing
-	    if (closest_dist < 100.) {
+	    if (closest_dist < 10000000.) {
 	      camera_obst->obst[obst*3] = closest_obj.pt.x;
 	      camera_obst->obst[obst*3 + 1] = closest_obj.pt.y;
 	      camera_obst->obst[obst*3 + 2] = closest_obj.size;
@@ -395,11 +395,15 @@ void get_camera_loc(shared_struct* shm, int index, int verbose, const char* car_
     }
 
     // Check the clockwise direction of the car
-    if ( (c > camera_loc->centroid + 3 && !((c > floor(centroids_list.size() * 0.75) && camera_loc->centroid < floor(centroids_list.size() * 0.25)))) || ((camera_loc->centroid > floor(centroids_list.size() * 0.75) && c < floor(centroids_list.size() * 0.25)))) {
+     if (index > 1 && abs(c - camera_loc->centroid) > 3) {
+    if ( (c > camera_loc->centroid + 3 && !((c > floor(centroids_list.size() * 0.9) && camera_loc->centroid < floor(centroids_list.size() * 0.1)))) || ((camera_loc->centroid > floor(centroids_list.size() * 0.9) && c < floor(centroids_list.size() * 0.1)))) {
 	camera_loc->is_clockwise = 0;
     } else {
+        //std::cout << "camera from " << camera_loc->centroid << " to " << c << "\n";
 	camera_loc->is_clockwise = 1;
     }
+   }
+    //std::cout << "camera from " << camera_loc->centroid << " to " << c << "\n";
 
     // Get the direction vector of the car
     get_centroid_direction(c, camera_loc->direction, camera_loc->is_clockwise);

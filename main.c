@@ -74,11 +74,14 @@ void print_loc(AnkiHandle h){
  *  Print car's current location (from camera)
  */
 void print_camera_loc(){
+    if (camera_loc->x < 0.0001 && camera_loc->y < 0.0001) {
+	printf("Coordinates error (0, 0)\n");
+	}
     if (camera_loc->success) {
-	printf(KBOLD KGRN "[Camera loc]" RESET " centroid: %d x: %.2f y: %.2f size: %.2f last-update: %i\n",
-	       camera_loc->centroid,camera_loc->x, camera_loc->y, camera_loc->size, camera_loc->update_time);
+	printf(KBOLD KGRN "[Camera loc]" RESET " centroid: %d x: %.2f y: %.2f clockwise: %d last-update: %i\n",
+	       camera_loc->centroid,camera_loc->x, camera_loc->y, camera_loc->is_clockwise, camera_loc->update_time);
     } else {
-	printf(KBOLD KRED "[Camera loc (DR)]" RESET " centroid: %d x: %.2f y: %.2f size: %.2f last-update: %i\n", camera_loc->centroid,camera_loc->x, camera_loc->y, camera_loc->size, camera_loc->update_time);
+	printf(KBOLD KRED "[Camera loc (DR)]" RESET " centroid: %d x: %.2f y: %.2f clockwise: %d last-update: %i\n", camera_loc->centroid, camera_loc->x, camera_loc->y, camera_loc->is_clockwise, camera_loc->update_time);
     }
 }
 
@@ -265,7 +268,7 @@ int main(int argc, char *argv[]) {
      * Hyper parameters
      */
     float camera_update = 0.05;   // Update of the camera picture, in percent of seconds
-    float control_update = 0.15;  // Update of the vehicle action, `` `` ``
+    float control_update = 0.4;  // Update of the vehicle action, `` `` ``
     float background_update = 5;  // Update of the background, `` `` ``
     int background_start = 80;    // Index at which the background computation starts
     int background_history = 15;  // Number of images to use for median computation
@@ -317,7 +320,7 @@ int main(int argc, char *argv[]) {
      * Load thread for camera update and processing
      */
     gettimeofday(&lapstarttime, NULL);
-    struct arg_struct camera_args = {car_color, 1000 * camera_update, 1000 * background_update, background_start, background_history, opponents, verbose};
+    struct arg_struct camera_args = {car_color, 1000 * camera_update, 1000 * background_update, background_start, background_history, opponents, verbose, race_clockwise};
     int ret = pthread_create (&camera, 0, update_camera_loc,  &camera_args);
 
 
@@ -336,6 +339,8 @@ int main(int argc, char *argv[]) {
     float laptime=-1.;
     float totaltime = 0.;
     float minlaptime = 50.;
+    int uturn_success = 0;
+    localization_t loc;
 
 
     /*
@@ -382,7 +387,7 @@ int main(int argc, char *argv[]) {
         } 
 	// Initialize trained policy
 	else {
-	    init_trained_policy("/home/cvml1/Code/TrainRuns/Training_NoRnd_ExploreSpeed/policy_table_70.txt");
+	    init_trained_policy("/home/cvml1/Code/TrainRuns/Training_2101_B/policy_table_101.txt");
 	}
 
         // Starts at timestamp if given	
@@ -417,9 +422,18 @@ int main(int argc, char *argv[]) {
 	    }
 
 	    // Check direction and perform uturn if false
-	    if(camera_loc->is_clockwise != race_clockwise){
+            loc = anki_s_get_localization(h);
+	    if(camera_loc->is_clockwise != race_clockwise){// || loc.is_clockwise != race_clockwise) {
 		anki_s_uturn(h);
-			while(camera_loc->is_clockwise != race_clockwise) {};
+	        time_t start_uturn = time(0);
+	        time_t wait_uturn = time(0);
+		while(camera_loc->is_clockwise != race_clockwise) {
+		   wait_uturn = time(0);
+                   loc = anki_s_get_localization(h);
+		   if (wait_uturn - start_uturn > 1) {
+		        break;
+		    }				
+		};
 		fprintf(stderr, "U-turn\n");
 	    }
 
@@ -440,9 +454,10 @@ int main(int argc, char *argv[]) {
      * ======================================== 3. Training mode
      */
     else if (mode == 0) {
+        control_update = 0.15;
 	//Initialize
-	init_totrain_onecar_policy(0.1);
-	//init_trained_policy("/home/cvml1/Code/TrainRuns/Training_1801/policy_table_301.txt");
+	//init_totrain_onecar_policy(0.1);
+	init_trained_policy("/home/cvml1/Code/TrainRuns/Training_2101_B/policy_table_101.txt");
 	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
 	export_policy_table(0,  "/home/cvml1/Code/TrainRuns/");
 
@@ -451,11 +466,11 @@ int main(int argc, char *argv[]) {
 	res = anki_s_set_speed(h, 1200, 2000);
 	camera_loc->real_speed = 1200;
 	int episode, step;
-
+	printf(" %d race clockwise and %d camera clockwise", race_clockwise, camera_loc->is_clockwise);
 	// Start episode
 	for (episode = 0; episode < nepisodes; episode++) {
 	    fprintf(stderr, KMAG "----------------- EPISODE %d" RESET,episode);
-    	    gettimeofday(&lapstarttime, NULL);
+    	    
 
 	    // Start run
 	    for (step = 0; step < nsteps; step++) {
@@ -468,10 +483,22 @@ int main(int argc, char *argv[]) {
 		// Check direction and perform uturn if false [wait until completion and restart]
 		if(camera_loc->is_clockwise != race_clockwise){
 		    anki_s_uturn(h);
-			while(camera_loc->is_clockwise != race_clockwise) {};
-		    fprintf(stderr, KMAG "U-turn\n" RESET);
+		    uturn_success = 1;
+	            time_t start_uturn = time(0);
+	            time_t wait_uturn = time(0);
+		    while(camera_loc->is_clockwise != race_clockwise) {
+			wait_uturn = time(0);
+			if (wait_uturn - start_uturn > 1) {
+			   uturn_success = 0;
+		           break;
+			}				
+		    };
+		    if (uturn_success) {
+		       gettimeofday(&lapstarttime, NULL);
+		       fprintf(stderr, KMAG "U-turn\n" RESET);
+		       //usleep(1 * 1000000);
+		    }
 		    run_index += 1;
-		    usleep(1 * 1000000);
 		    break;
 		}
 

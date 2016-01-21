@@ -81,6 +81,7 @@ void init_det_one_car_policy() {
 
 int apply_policy(AnkiHandle h, camera_localization_t c) {
     //Choose best action from policy and apply
+	  //std::cout << "Centroid " << c.centroid << "and " << deterministic <<"\n";
     if(c.centroid>=0){
 	if (deterministic) {
 	  State s(centroids_list[c.centroid], c.real_speed);
@@ -119,7 +120,7 @@ void init_trained_policy(char* filename) {
     int i;
     actions_list.push_back(Action());
     for (i = 0; i < 2; i ++) {
-	actions_list.push_back(Action(speed_values[i], accel));
+	actions_list.push_back(Action(speed_values[i], accel));	
     }
     for (i = 0; i < 2; i ++) {
 	actions_list.push_back(Action(offset_values[i], lanespeed, accel));
@@ -196,7 +197,7 @@ void init_totrain_onecar_policy(float initepsilon) {
     actions_list.push_back(Action());
     
     for (i = 0; i < 2; i ++) {
-	actions_list.push_back(Action(speed_values[i], accel));
+        actions_list.push_back(Action(speed_values[i], accel));
     }
 
     for (i = 0; i < 2; i ++) {
@@ -259,7 +260,7 @@ float distance_reward_onecar_policy(State s, Action a, State t) {
     }
 
     float r = get_distance_vseg(s.get_car(), t.get_car(), 0) - 2;
-    if (r < 0) {
+    if (r <= 0) {
 	    r = -100.;
 	}
     return r;
@@ -279,7 +280,7 @@ float zero_reward_onecar_policy(State s, Action a, State t) {
     }
 
     float r = get_distance_vseg(s.get_car(), t.get_car(), 0);
-    if (r < 0) {
+    if (r <= 0) {
 	    r = -1000.;
      } else {
 	r = 0;
@@ -319,7 +320,7 @@ int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learn
 	}
 
 	pi.set_score(previous_state, previous_action, pi.get_score(previous_state, previous_action) * (1. - learning_rate) + learning_rate * discount_factor * pi.get_best_score(s) + learning_rate * reward);
-        fprintf(stderr, "New score %f ", pi.get_score(previous_state, previous_action) * (1. - learning_rate) + learning_rate * discount_factor * pi.get_best_score(s) + learning_rate * reward);
+        //fprintf(stderr, "New score %f ", pi.get_score(previous_state, previous_action) * (1. - learning_rate) + learning_rate * discount_factor * pi.get_best_score(s) + learning_rate * reward);
     }
 
 
