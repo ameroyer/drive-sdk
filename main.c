@@ -129,7 +129,7 @@ void* update_camera_loc(void* aux) {
     camera_loc->speed = 1.;
     camera_loc->direction[0] = 1;
     camera_loc->direction[1] = 0;
-    camera_loc->centroid=0;
+    camera_loc->centroid=375;
     camera_loc->update_time = 0;
     camera_loc->is_clockwise = race_clockwise;
 
@@ -183,7 +183,7 @@ void* update_camera_loc(void* aux) {
 	// Compute differential image in temp and update location
 	temp->count = camera_index + 1;
 	sub(shm, background, temp, 80);
-	get_camera_loc(temp, camera_index + 1, verbose, car_color, race_clockwise);
+	get_camera_loc(temp, camera_index + 1, verbose, car_color, race_clockwise); // Comment out when taking background on new track
 
 	// If needed, save current image for next background update
 	if (camera_index == next_bg_update) {
@@ -268,11 +268,11 @@ int main(int argc, char *argv[]) {
      * Hyper parameters
      */
     float camera_update = 0.05;   // Update of the camera picture, in percent of seconds
-    float control_update = 0.4;  // Update of the vehicle action, `` `` ``
+    float control_update = 0.15;  // Update of the vehicle action, `` `` ``
     float background_update = 5;  // Update of the background, `` `` ``
     int background_start = 80;    // Index at which the background computation starts
     int background_history = 15;  // Number of images to use for median computation
-    int nlap = 10;                // Number of laps before the car stops
+    int nlap = 15;                // Number of laps before the car stops
     int race_clockwise = 0;       // Race in counter clockwise direction
 
 
@@ -393,8 +393,8 @@ int main(int argc, char *argv[]) {
         // Starts at timestamp if given	
 	time_t secs = time(0);
 	struct tm *local = localtime(&secs);
-	printf("[Waiting for start time....]\n");
-        while ((hour_start  - local->tm_hour) > 0 || (minute_start - local->tm_min) > 0) {
+	printf("[Waiting for start time %dh%dmn....]\n", hour_start, minute_start);
+        while (hour_start > local->tm_hour || (hour_start == local->tm_hour && minute_start > local->tm_min)) {
           secs = time(0);
           local = localtime(&secs);
 	}
@@ -412,7 +412,7 @@ int main(int argc, char *argv[]) {
 
 	    // Check if lap finished
 	    laptime = is_car_finished();
-	    if (laptime > 1.){
+	    if (laptime > 2.5){
 		nlap -= 1;
 		fprintf(stderr, "    > Lap time: %.3f\n\n", laptime);
 		totaltime += laptime;
@@ -456,17 +456,18 @@ int main(int argc, char *argv[]) {
     else if (mode == 0) {
         control_update = 0.15;
 	//Initialize
-	//init_totrain_onecar_policy(0.1);
-	init_trained_policy("/home/cvml1/Code/TrainRuns/Training_2101_B/policy_table_101.txt");
+	init_totrain_onecar_policy(0.1);	
+	//init_trained_policy("/home/cvml1/Code/TrainRuns/Training_2101_B/policy_table_101.txt");
+	printf ("Export \n");
 	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
+	printf("Export 1\n");
 	export_policy_table(0,  "/home/cvml1/Code/TrainRuns/");
-
+	printf("Export 2\n");
 	//Start
         starting_signal = 1;
-	res = anki_s_set_speed(h, 1200, 2000);
-	camera_loc->real_speed = 1200;
+	res = anki_s_set_speed(h, 1300, 2000);
+	camera_loc->real_speed = 1300;
 	int episode, step;
-	printf(" %d race clockwise and %d camera clockwise", race_clockwise, camera_loc->is_clockwise);
 	// Start episode
 	for (episode = 0; episode < nepisodes; episode++) {
 	    fprintf(stderr, KMAG "----------------- EPISODE %d" RESET,episode);

@@ -104,7 +104,7 @@ void init_trained_policy(char* filename) {
     pi = Policy(); 
     deterministic = 0;
     
-    int speed_values[] = {1200, 1700};
+    int speed_values[] = {1300, 1700};
     int offset_values[] = {-1000, 1000};
     float lanespeed = 150;
     float accel = 2000;
@@ -181,7 +181,7 @@ void init_trained_policy(char* filename) {
 void init_totrain_onecar_policy(float initepsilon) {
     pi = Policy();
     epsilon = initepsilon;
-    int speed_values[] = {1200, 1700};
+    int speed_values[] = {1300, 1700};
     int offset_values[] = {1000, -1000};
     float lanespeed = 150;
     float accel = 2000;
@@ -343,7 +343,7 @@ int apply_policy_trainingmode(AnkiHandle h, camera_localization_t c, float learn
     // Store state and action
     previous_state = s;
     // Test = no action in even step number
-    if (run.size() % 2 == 0) {
+    if (run.size() % 3 == 0) {
        previous_action = Action();
     } 
     run_actions.push_back(previous_action);

@@ -107,7 +107,7 @@ int State::get_carid() {
 
 // Find action that maximizes the score for state s
 Action Policy::get_next_action(State s) {
-    float max = -100;
+    float max = -10000;
     std::vector<Action> best;
     for(std::map<Action, float>::iterator iterator = qscores[s].begin(); iterator != qscores[s].end(); iterator++) {
 	if (iterator->second > max) {
@@ -166,6 +166,36 @@ float Policy::get_score(State s, Action a) {
  */
 Action DetOneCarPolicy::get_next_action(State s) {
 
+    // Always go on inside lane
+    int step = 2;
+    float after_lane = centroids_list[(centroids_list.size() + s.get_carid() - 4 * step)% centroids_list.size()].get_stra();
+    if (s.get_lane() < 3 && last_action_type != 2 && s.get_stra() > curve_threshold && after_lane > curve_threshold) {
+	last_action_type = 2;
+	return Action(-laneoffset, 100, accel);
+    }
+
+	 
+    // Set speed depending on curvature
+    step = 3;
+    float after = centroids_list[(centroids_list.size() + s.get_carid() - 4 * step)% centroids_list.size()].get_stra();
+    float now = s.get_stra();
+    if ((now <= curve_threshold && after > curve_threshold) || (now > curve_threshold && after > curve_threshold)) {
+	if (s.get_speed() < max_speed_straight) {
+	    last_action_type = 1;
+	    return Action(max_speed_straight, accel);
+	}
+    }
+    else if ((now > curve_threshold && after <= curve_threshold) || (now <= curve_threshold&& after <= curve_threshold)) {
+	if (s.get_speed() != max_speed_curve) {
+	    last_action_type = 1;
+	    return Action(max_speed_curve, accel);
+	}
+    }	
+    last_action_type = 0;
+    return Action();
+};
+
+/*
     // Do nothing if last action
     int step = 2;
     float previous = centroids_list[(s.get_carid() + 4 * step)% centroids_list.size()].get_stra();
@@ -178,10 +208,10 @@ Action DetOneCarPolicy::get_next_action(State s) {
 	    last_action_type = 1;
 	    return Action(max_speed_straight, accel);
 	}
-	/*if (s.get_lane() < straight_lane && last_action_type!=2) {
-	  last_action_type = 2;
-	  return Action(-laneoffset, 100, accel);
-	  }*/
+	//if (s.get_lane() < straight_lane && last_action_type!=2) {
+	 // last_action_type = 2;
+	 // return Action(-laneoffset, 100, accel);
+	 // }
     }
     // In curve parts, go on middle lane and slightly decrease speed
     else if (now > curve_threshold && after <= curve_threshold) {
@@ -189,11 +219,11 @@ Action DetOneCarPolicy::get_next_action(State s) {
 	    last_action_type = 1;
 	    return Action(max_speed_curve, accel);
 	}
-	/*if (s.get_lane() > curve_lane  && last_action_type!=2) {
-	  last_action_type = 2;
-	  return Action(laneoffset, 100, accel);
-	  }*/
+	//if (s.get_lane() > curve_lane  && last_action_type!=2) {
+	 // last_action_type = 2;
+	 // return Action(laneoffset, 100, accel);
+	 // }
     }	
     last_action_type = 0;
     return Action();
-};
+};*/
