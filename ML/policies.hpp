@@ -25,6 +25,7 @@ extern "C" {
     void export_run(int current_run, char* output_dir, double laptime);
     void export_policy(int current_episode, char* output_dir);
     void export_policy_table(int current_episode, char* output_dir);
+    int go_inside(AnkiHandle h); 
 
 
 #ifdef __cplusplus

@@ -272,7 +272,7 @@ int main(int argc, char *argv[]) {
     float background_update = 5;  // Update of the background, `` `` ``
     int background_start = 80;    // Index at which the background computation starts
     int background_history = 15;  // Number of images to use for median computation
-    int nlap = 15;                // Number of laps before the car stops
+    int nlap = 10;                // Number of laps before the car stops
     int race_clockwise = 0;       // Race in counter clockwise direction
 
 
@@ -381,13 +381,15 @@ int main(int argc, char *argv[]) {
      * ============================= 2. Policy mode
      */
     else if (mode == 1 || mode == 2) {
+	float laptimes [nlap];
+        int laps = 0;
 	// Initialize a deterministic policy
 	if (mode == 1) {
 	   init_det_one_car_policy();
         } 
 	// Initialize trained policy
 	else {
-	    init_trained_policy("/home/cvml1/Code/TrainRuns/Training_2101_B/policy_table_101.txt");
+	    init_trained_policy("/home/cvml1/Code/TrainRuns/Training_2501_D/policy_table_60.txt");
 	}
 
         // Starts at timestamp if given	
@@ -401,8 +403,8 @@ int main(int argc, char *argv[]) {
      
 	// Start
         starting_signal = 1;
-	res = anki_s_set_speed(h, 1700, 5000);
-	camera_loc->real_speed = 1700;
+	res = anki_s_set_speed(h, 1600, 5000);
+	camera_loc->real_speed = 1600;
 
 	while (kbint && !res && nlap > 0) {
 	    // Display
@@ -416,6 +418,8 @@ int main(int argc, char *argv[]) {
 		nlap -= 1;
 		fprintf(stderr, "    > Lap time: %.3f\n\n", laptime);
 		totaltime += laptime;
+	        laptimes[laps] = laptime;
+		laps++;
 		if (laptime < minlaptime) {
 		    minlaptime = laptime;
 		}
@@ -439,15 +443,25 @@ int main(int argc, char *argv[]) {
 
 
 	    // Apply deterministic policy decsion
-	    res = apply_policy(h, *camera_loc);
-	    if (res < 0) { // update real speed
-		camera_loc->real_speed = - res;
-		res = 0;
-	    }
+	    if (opponents > 0 && run_index % 6 == 0 ) {
+		res = go_inside(h);
+	     } else {		
+	       res = apply_policy(h, *camera_loc);
+	       if (res < 0) { // update real speed
+		  camera_loc->real_speed = - res;
+		  res = 0;
+	        }
+	   }
 
 	    // Next step
 	    run_index += 1;
 	    usleep(control_update * 1000000);
+	}
+
+    int i = 0;
+	printf("Laptimes\n");
+    for (i = 0; i < laps; i++) {
+	 printf("Lap %d: %f\n", i + 1, laptimes[i] );
 	}
     }
     /*
@@ -456,8 +470,8 @@ int main(int argc, char *argv[]) {
     else if (mode == 0) {
         control_update = 0.15;
 	//Initialize
-	init_totrain_onecar_policy(0.1);	
-	//init_trained_policy("/home/cvml1/Code/TrainRuns/Training_2101_B/policy_table_101.txt");
+	//init_totrain_onecar_policy(0.1);	
+	init_trained_policy("/home/cvml1/Code/TrainRuns/Training_2501_D/policy_table_60.txt");
 	printf ("Export \n");
 	export_policy(0,  "/home/cvml1/Code/TrainRuns/");
 	printf("Export 1\n");

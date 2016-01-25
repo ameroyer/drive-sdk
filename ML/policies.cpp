@@ -28,6 +28,11 @@ void reset_run() {
 }
 
 
+int go_inside(AnkiHandle h) { 
+	Action go_inside = Action(-1000, 150, 2000);
+	return go_inside.apply(h);
+}
+
 void export_run(int current_run, char* output_dir, double laptime) {
     //export run to a file 
     std::ostringstream ss;  
@@ -104,7 +109,7 @@ void init_trained_policy(char* filename) {
     pi = Policy(); 
     deterministic = 0;
     
-    int speed_values[] = {1300, 1700};
+    int speed_values[] = {1300, 1600};
     int offset_values[] = {-1000, 1000};
     float lanespeed = 150;
     float accel = 2000;
@@ -181,7 +186,7 @@ void init_trained_policy(char* filename) {
 void init_totrain_onecar_policy(float initepsilon) {
     pi = Policy();
     epsilon = initepsilon;
-    int speed_values[] = {1300, 1700};
+    int speed_values[] = {1300, 1600};
     int offset_values[] = {1000, -1000};
     float lanespeed = 150;
     float accel = 2000;
