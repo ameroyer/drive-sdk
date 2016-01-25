@@ -28,9 +28,14 @@ void reset_run() {
 }
 
 
-int go_inside(AnkiHandle h) { 
-	Action go_inside = Action(-1000, 150, 2000);
-	return go_inside.apply(h);
+int go_inside(AnkiHandle h, camera_localization_t c) { 
+	  State s(centroids_list[c.centroid], c.real_speed);
+        if (s.get_stra() > 0.5) {
+	  Action go_inside = Action(-1000, 150, 2000);
+	  return go_inside.apply(h);
+	} else {
+	  return -1; 
+	}
 }
 
 void export_run(int current_run, char* output_dir, double laptime) {

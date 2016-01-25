@@ -341,6 +341,7 @@ int main(int argc, char *argv[]) {
     float minlaptime = 50.;
     int uturn_success = 0;
     localization_t loc;
+    int went_inside = 0;
 
 
     /*
@@ -443,15 +444,21 @@ int main(int argc, char *argv[]) {
 
 
 	    // Apply deterministic policy decsion
-	    if (opponents > 0 && run_index % 6 == 0 ) {
-		res = go_inside(h);
-	     } else {		
+	    went_inside = 0;
+	    if (opponents > 0 && run_index % 5 == 0 ) {
+		res = go_inside(h, *camera_loc);
+		if (res != -1) {
+		  went_inside = 1;
+		}
+	     } 
+	     if (!went_inside) {	
 	       res = apply_policy(h, *camera_loc);
 	       if (res < 0) { // update real speed
 		  camera_loc->real_speed = - res;
 		  res = 0;
-	        }
-	   }
+	       }
+	     }
+	   
 
 	    // Next step
 	    run_index += 1;
